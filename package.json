@@ -1,0 +1,20 @@
+{
+  "name": "com.locus.bundlesystem",
+  "version": "1.0.0",
+  "displayName": "Locus Bundle System",
+  "description": "Simple Assetbundle Build System using Scriptable Build Pipline.",
+  "unity": "2018.3",
+  "dependencies": {
+    "com.unity.scriptablebuildpipeline": "1.0.0"
+  },
+  "keywords": [
+    "assetbundle",
+    "patch",
+    "build"
+  ],
+  "author": {
+    "name": "Locus",
+    "email": "spec_oops@naver.com",
+    "url": "https://github.com/locus84"
+  }
+}
