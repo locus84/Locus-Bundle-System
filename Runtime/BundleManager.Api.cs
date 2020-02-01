@@ -332,8 +332,9 @@ namespace BundleSystem
 
     public class BundleAsyncOperation : CustomYieldInstruction
     {
-        public bool IsDone { get; private set; } = false;
-        public bool Succeeded { get; private set; } = false;
+        public bool IsDone => Code != BundleErrorCode.NotFinished;
+        public bool Succeeded => Code == BundleErrorCode.Success;
+        public BundleErrorCode Code { get; private set; } = BundleErrorCode.NotFinished;
         public int TotalCount { get; private set; } = 0;
         public int CurrentCount { get; private set; } = 0;
         public float Progress { get; private set; } = 0f;
@@ -353,18 +354,25 @@ namespace BundleSystem
             Progress = progress;
         }
 
-        internal void Done(bool succeeded)
+        internal void Done(BundleErrorCode code)
         {
-            if (succeeded)
+            if (code == BundleErrorCode.Success)
             {
                 CurrentCount = TotalCount;
                 Progress = 1f;
             }
-
-            Succeeded = succeeded;
-            IsDone = true;
+            Code = code;
         }
 
         public override bool keepWaiting => !IsDone;
+    }
+
+    public enum BundleErrorCode
+    {
+        NotFinished = -1,
+        Success = 0,
+        NotInitialized = 1,
+        NetworkError = 2,
+        ManifestParseError = 3,
     }
 }

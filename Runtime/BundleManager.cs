@@ -89,7 +89,7 @@ namespace BundleSystem
         {
             if(Initialized)
             {
-                result.Done(true);
+                result.Done(BundleErrorCode.Success);
                 yield break;
             }
 
@@ -98,8 +98,8 @@ namespace BundleSystem
 
             if(UseAssetDatabase)
             {
-                Initialized = true;
-                result.Done(true);
+                Initialized = true; 
+                result.Done(BundleErrorCode.Success);
                 yield break;
             }
 
@@ -116,13 +116,13 @@ namespace BundleSystem
             yield return manifestReq.SendWebRequest();
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.NetworkError);
                 yield break;
             }
 
             if(!AssetbundleBuildManifest.TryParse(manifestReq.downloadHandler.text, out var localManifest))
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.ManifestParseError);
                 yield break;
             }
 
@@ -164,7 +164,7 @@ namespace BundleSystem
                 }
                 else
                 {
-                    result.Done(false);
+                    result.Done(BundleErrorCode.NetworkError);
                     yield break;
                 }
 
@@ -175,7 +175,7 @@ namespace BundleSystem
             RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget);
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
-            result.Done(true);
+            result.Done(BundleErrorCode.Success);
         }
 
         public static BundleAsyncOperation<long> GetDownloadSize()
@@ -190,13 +190,13 @@ namespace BundleSystem
             if (!Initialized)
             {
                 Debug.LogError("Do Initialize first");
-                result.Done(false);
+                result.Done(BundleErrorCode.NotInitialized);
                 yield break;
             }
 
             if (UseAssetDatabase)
             {
-                result.Done(true);
+                result.Done(BundleErrorCode.Success);
                 yield break;
             }
 
@@ -205,7 +205,7 @@ namespace BundleSystem
 
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.NetworkError);
                 yield break;
             }
 
@@ -214,7 +214,7 @@ namespace BundleSystem
 
             if (!AssetbundleBuildManifest.TryParse(remoteManifestJson, out var remoteManifest))
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.ManifestParseError);
                 yield break;
             }
 
@@ -230,7 +230,7 @@ namespace BundleSystem
             }
 
             result.Result = totalSize;
-            result.Done(true);
+            result.Done(BundleErrorCode.Success);
         }
 
         /// <summary>
@@ -250,13 +250,13 @@ namespace BundleSystem
             if (!Initialized)
             {
                 Debug.LogError("Do Initialize first");
-                result.Done(false);
+                result.Done(BundleErrorCode.NotInitialized);
                 yield break;
             }
 
             if(UseAssetDatabase)
             {
-                result.Done(true);
+                result.Done(BundleErrorCode.Success);
                 yield break;
             }
 
@@ -267,7 +267,7 @@ namespace BundleSystem
 
             if(manifestReq.isHttpError || manifestReq.isNetworkError)
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.NetworkError);
                 yield break;
             }
 
@@ -275,7 +275,7 @@ namespace BundleSystem
 
             if (!AssetbundleBuildManifest.TryParse(remoteManifestJson, out var remoteManifest))
             {
-                result.Done(false);
+                result.Done(BundleErrorCode.ManifestParseError);
                 yield break;
             }
 
@@ -309,7 +309,7 @@ namespace BundleSystem
 
                     if (bundleReq.isNetworkError || bundleReq.isHttpError)
                     {
-                        result.Done(false);
+                        result.Done(BundleErrorCode.NetworkError);
                         yield break;
                     }
 
@@ -341,8 +341,7 @@ namespace BundleSystem
             PlayerPrefs.SetString("CachedManifest", remoteManifestJson);
             PlayerPrefs.Save();
             result.Result = bundleReplaced;
-            result.Done(true);
+            result.Done(BundleErrorCode.Success);
         }
     }
-
 }
