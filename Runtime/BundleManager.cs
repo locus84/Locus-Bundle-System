@@ -134,6 +134,7 @@ namespace BundleSystem
             for(int i = 0; i < localManifest.BundleInfos.Count; i++)
             {
                 result.SetCurrentIndex(i);
+                result.SetCachedBundle(true);
                 AssetbundleBuildManifest.BundleInfo bundleInfoToLoad;
                 AssetbundleBuildManifest.BundleInfo cachedBundleInfo = default;
                 var localBundleInfo = localManifest.BundleInfos[i];
@@ -288,6 +289,7 @@ namespace BundleSystem
                 var bundleInfo = remoteManifest.BundleInfos[i];
                 var localBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
                 var isCached = Caching.IsVersionCached(bundleInfo.AsCached);
+                result.SetCachedBundle(isCached);
 
                 var loadURL = localBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName);
                 if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {localBundle}, isCached {isCached}");

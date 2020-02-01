@@ -332,12 +332,18 @@ namespace BundleSystem
 
     public class BundleAsyncOperation : CustomYieldInstruction
     {
-        public bool IsDone => Code != BundleErrorCode.NotFinished;
-        public bool Succeeded => Code == BundleErrorCode.Success;
-        public BundleErrorCode Code { get; private set; } = BundleErrorCode.NotFinished;
+        public bool IsDone => ErrorCode != BundleErrorCode.NotFinished;
+        public bool Succeeded => ErrorCode == BundleErrorCode.Success;
+        public BundleErrorCode ErrorCode { get; private set; } = BundleErrorCode.NotFinished;
         public int TotalCount { get; private set; } = 0;
-        public int CurrentCount { get; private set; } = 0;
+        public int CurrentCount { get; private set; } = -1;
         public float Progress { get; private set; } = 0f;
+        public bool CurrentlyLoadingFromCache { get; private set; } = false;
+
+        internal void SetCachedBundle(bool cached)
+        {
+            CurrentlyLoadingFromCache = cached;
+        }
 
         internal void SetIndexLength(int total)
         {
@@ -361,7 +367,7 @@ namespace BundleSystem
                 CurrentCount = TotalCount;
                 Progress = 1f;
             }
-            Code = code;
+            ErrorCode = code;
         }
 
         public override bool keepWaiting => !IsDone;
