@@ -264,6 +264,8 @@ namespace BundleSystem
 
         private void ReloadBundle(string bundleName)
         {
+            if (!AutoReloadBundle) return;
+
             if (!s_AssetBundles.TryGetValue(bundleName, out var loadedBundle))
             {
                 if (LogMessages) Debug.Log("Bundle To Reload does not exist");
