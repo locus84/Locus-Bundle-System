@@ -39,39 +39,45 @@ It also can be changed later on by patching.
 \
 **Examples**
 ```cs
-async Task SomeFunction()
-{
-    //this will await full async execution
-    await SomeAsyncFunction("Direct call"));
+// Start is called before the first frame update
+    IEnumerator Start()
+    {
+        //initialize bundle system & load local bundles
+        yield return BundleManager.Initialize();
 
-    //this will await just enqueueing and 1st iteration of SomeAsyncFunction.
-    //(right before another await inside function)
-    await myFiber.Enqueue(() => SomeAsyncFunction("Action Style"));
-}
+        //get download size from latest bundle manifest
+        var sizeReq = BundleManager.GetDownloadSize();
+        yield return sizeReq;
+        if (!sizeReq.Succeeded)
+        {
+            //handle error
+            Debug.LogError(sizeReq.ErrorCode);
+        }
 
-async Task SomeAsyncFunction(string log)
-{
-    //You can check where is your context anytime
-    Console.WriteLine(log + " : "  + myFiber.IsCurrentThread);
-    // - "Direct call : false"
-    // - "Action Styple : true"
-    
-    //if you call this function directly, call one of following to get into TaskFiber execution
-    await myFiber;
-    await Task.Yield().IntoFiber(myFiber);
-    await myFiber.IntoFiber();
+        Debug.Log($"Need to download {sizeReq.Result * 0.000001f } mb");
 
-    //Now you're in myFiber's execution chain.
-    Console.WriteLine(log + " : "  + myFiber.IsCurrentThread);
-    // - "Direct call : true"
-    // - "Action Styple : true"
+        //start downloading
+        var downloadReq = BundleManager.DownloadAssetBundles();
+        while(!downloadReq.IsDone)
+        {
+            if(downloadReq.CurrentCount >= 0)
+            {
+                Debug.Log($"Current File {downloadReq.CurrentCount}/{downloadReq.TotalCount}, " +
+                    $"Progress : {downloadReq.Progress * 100}%, " +
+                    $"FromCache {downloadReq.CurrentlyLoadingFromCache}");
+            }
+            yield return null;
+        }
+        yield return downloadReq;
+        if(!downloadReq.Succeeded)
+        {
+            //handle error
+            Debug.LogError(downloadReq.ErrorCode);
+        }
 
-    await Task.Delay(1000);
-    //when calling above await keyword, the execution context will be stored
-    Console.WriteLine(myFiber.IsCurrentThread);
-    // - "Direct call : true"
-    // - "Action Styple : true"
-}
+
+        //start to game
+    }
 ```
 
 
