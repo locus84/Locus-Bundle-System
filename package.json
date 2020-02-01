@@ -16,5 +16,12 @@
     "name": "Locus",
     "email": "spec_oops@naver.com",
     "url": "https://github.com/locus84"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Sample",
+      "description": "Basic functionaly samples.",
+      "path": "Samples~/Sample"
+    }
+  ]
 }
