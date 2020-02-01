@@ -213,7 +213,7 @@ namespace BundleSystem
                 if (s_BundleRefCounts.ContainsKey(refBundleName))
                 {
                     s_BundleRefCounts[refBundleName] -= count;
-                    if (s_BundleRefCounts[refBundleName] <= 0) Instance.ReloadBundle(refBundleName);
+                    if (s_BundleRefCounts[refBundleName] <= 0) s_Instance.ReloadBundle(refBundleName);
                 }
             }
         }

@@ -332,34 +332,32 @@ namespace BundleSystem
 
     public class BundleAsyncOperation : CustomYieldInstruction
     {
-        public bool Started => TotalLength > 0 || IsDone;
         public bool IsDone { get; private set; } = false;
         public bool Succeeded { get; private set; } = false;
-        public int TotalLength { get; private set; } = 0;
-        public int CurrentFileIndex { get; private set; } = 0;
+        public int TotalCount { get; private set; } = 0;
+        public int CurrentCount { get; private set; } = 0;
         public float Progress { get; private set; } = 0f;
-        public bool Changed = false;
 
-        public void SetIndexLength(int total)
+        internal void SetIndexLength(int total)
         {
-            TotalLength = total;
+            TotalCount = total;
         }
 
-        public void SetCurrentIndex(int current)
+        internal void SetCurrentIndex(int current)
         {
-            CurrentFileIndex = current;
+            CurrentCount = current;
         }
 
-        public void SetProgress(float progress)
+        internal void SetProgress(float progress)
         {
             Progress = progress;
         }
 
-        public void Done(bool succeeded)
+        internal void Done(bool succeeded)
         {
             if (succeeded)
             {
-                CurrentFileIndex = TotalLength;
+                CurrentCount = TotalCount;
                 Progress = 1f;
             }
 

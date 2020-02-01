@@ -13,7 +13,7 @@ namespace BundleSystem
     public partial class BundleManager : MonoBehaviour
     {
         //instance is almost only for coroutines
-        public static BundleManager Instance { get; private set; }
+        private static BundleManager s_Instance { get; set; }
 
         class LoadedBundle
         {
@@ -56,8 +56,8 @@ namespace BundleSystem
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += TrackOnSceneLoaded;
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += TrackOnSceneUnLoaded;
-            Instance = new GameObject("_BundleManager").AddComponent<BundleManager>();
-            DontDestroyOnLoad(Instance.gameObject);
+            s_Instance = new GameObject("_BundleManager").AddComponent<BundleManager>();
+            DontDestroyOnLoad(s_Instance.gameObject);
             LocalURL = Application.platform == RuntimePlatform.IPhonePlayer ? "file://" + AssetbundleBuildSettings.LocalBundleRuntimePath : AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
@@ -78,10 +78,10 @@ namespace BundleSystem
             s_AssetBundles.Clear();
         }
 
-        public BundleAsyncOperation Initialize(bool autoReloadBundle = true, bool logMessages = false)
+        public static BundleAsyncOperation Initialize(bool autoReloadBundle = true, bool logMessages = false)
         {
             var result = new BundleAsyncOperation();
-            StartCoroutine(CoInitalizeLocalBundles(result, autoReloadBundle, logMessages));
+            s_Instance.StartCoroutine(s_Instance.CoInitalizeLocalBundles(result, autoReloadBundle, logMessages));
             return result;
         }
 
@@ -178,10 +178,10 @@ namespace BundleSystem
             result.Done(true);
         }
 
-        public BundleAsyncOperation<long> GetDownloadSize()
+        public static BundleAsyncOperation<long> GetDownloadSize()
         {
             var result = new BundleAsyncOperation<long>();
-            StartCoroutine(GetDownloadSize(result));
+            s_Instance.StartCoroutine(s_Instance.GetDownloadSize(result));
             return result;
         }
 
@@ -238,10 +238,10 @@ namespace BundleSystem
         /// </summary>
         /// <param name="hardUnload">hard unload reloaded bundle</param>
         /// <returns>returns bundle has been reloaded</returns>
-        public BundleAsyncOperation<bool> DownloadAssetBundles(bool hardUnload = false)
+        public static BundleAsyncOperation<bool> DownloadAssetBundles(bool hardUnload = false)
         {
             var result = new BundleAsyncOperation<bool>();
-            StartCoroutine(CoDownloadAssetBundles(hardUnload, result));
+            s_Instance.StartCoroutine(s_Instance.CoDownloadAssetBundles(hardUnload, result));
             return result;
         }
 
