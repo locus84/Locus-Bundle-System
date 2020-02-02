@@ -14,7 +14,20 @@ public class SampleTitleScene : MonoBehaviour
 
     IEnumerator CoDownloadAssetBundles()
     {
-        yield return BundleManager.DownloadAssetBundles();
+        var manifestReq = BundleManager.GetManifest();
+        yield return manifestReq;
+        if (!manifestReq.Succeeded)
+        {
+            Debug.LogError(manifestReq.ErrorCode);
+            yield break;
+        }
+        var downloadReq = BundleManager.DownloadAssetBundles(manifestReq.Result);
+        yield return downloadReq;
+        if (!downloadReq.Succeeded)
+        {
+            Debug.LogError(downloadReq.ErrorCode);
+            yield break;
+        }
     }
 
     // Start is called before the first frame update

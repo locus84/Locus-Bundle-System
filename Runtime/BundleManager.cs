@@ -259,14 +259,14 @@ namespace BundleSystem
         /// </summary>
         /// <param name="hardUnload">hard unload reloaded bundle</param>
         /// <returns>returns bundle has been reloaded</returns>
-        public static BundleAsyncOperation<bool> DownloadAssetBundles(bool hardUnload = false)
+        public static BundleAsyncOperation<bool> DownloadAssetBundles(AssetbundleBuildManifest manifest, bool hardUnload = false)
         {
             var result = new BundleAsyncOperation<bool>();
-            s_Helper.StartCoroutine(CoDownloadAssetBundles(hardUnload, result));
+            s_Helper.StartCoroutine(CoDownloadAssetBundles(manifest, hardUnload, result));
             return result;
         }
 
-        static IEnumerator CoDownloadAssetBundles(bool hardUnload, BundleAsyncOperation<bool> result)
+        static IEnumerator CoDownloadAssetBundles(AssetbundleBuildManifest remoteManifest, bool hardUnload, BundleAsyncOperation<bool> result)
         {
             if (!Initialized)
             {
@@ -282,23 +282,6 @@ namespace BundleSystem
             }
 
             var startTime = Time.realtimeSinceStartup;
-
-            var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName));
-            yield return manifestReq.SendWebRequest();
-
-            if(manifestReq.isHttpError || manifestReq.isNetworkError)
-            {
-                result.Done(BundleErrorCode.NetworkError);
-                yield break;
-            }
-
-            var remoteManifestJson = manifestReq.downloadHandler.text;
-
-            if (!AssetbundleBuildManifest.TryParse(remoteManifestJson, out var remoteManifest))
-            {
-                result.Done(BundleErrorCode.ManifestParseError);
-                yield break;
-            }
 
             result.SetIndexLength(remoteManifest.BundleInfos.Count);
             bool bundleReplaced = false; //bundle has been replaced
@@ -360,8 +343,6 @@ namespace BundleSystem
             if (LogMessages) Debug.Log($"CacheUsed After CleanUp : {Caching.defaultCache.spaceOccupied} bytes");
 
             GlobalBundleHash = remoteManifest.GlobalHash.ToString();
-            PlayerPrefs.SetString("CachedManifest", remoteManifestJson);
-            PlayerPrefs.Save();
             result.Result = bundleReplaced;
             result.Done(BundleErrorCode.Success);
         }

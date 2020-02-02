@@ -16,18 +16,18 @@ public class LocusBundleSample : MonoBehaviour
         yield return BundleManager.Initialize();
 
         //get download size from latest bundle manifest
-        var sizeReq = BundleManager.GetDownloadSize();
-        yield return sizeReq;
-        if (!sizeReq.Succeeded)
+        var manifestReq = BundleManager.GetManifest();
+        yield return manifestReq;
+        if (!manifestReq.Succeeded)
         {
             //handle error
-            Debug.LogError(sizeReq.ErrorCode);
+            Debug.LogError(manifestReq.ErrorCode);
         }
 
-        Debug.Log($"Need to download {sizeReq.Result * 0.000001f } mb");
+        Debug.Log($"Need to download { BundleManager.GetDownloadSize(manifestReq.Result) * 0.000001f } mb");
 
         //start downloading
-        var downloadReq = BundleManager.DownloadAssetBundles();
+        var downloadReq = BundleManager.DownloadAssetBundles(manifestReq.Result);
         while(!downloadReq.IsDone)
         {
             if(downloadReq.CurrentCount >= 0)
@@ -38,6 +38,7 @@ public class LocusBundleSample : MonoBehaviour
             }
             yield return null;
         }
+
         if(!downloadReq.Succeeded)
         {
             //handle error
