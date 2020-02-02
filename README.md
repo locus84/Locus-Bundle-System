@@ -10,9 +10,7 @@ So here is my own bundle system that also utilizes Scriptable Build Pipline and 
 This is build up to support very common senarios I've experienced.\
 But you can extend this on purpose.(just fork and make modifications)
 
-Notice! It caches assetbundles so eats some memory(but quite low)
-
-<br />
+Not that it caches assetbundles so eats some memory(but quite low)
 
 \
 **Synchronized API Support!**
