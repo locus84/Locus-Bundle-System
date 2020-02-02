@@ -34,6 +34,22 @@ It's very comfortable for users that loves organizing contents using Folders lik
 And using local bundles, you can ship part of your bundles in player build.\
 It also can be changed later on by patching.
 
+## How to Setup 
+
+**Create AssetbundleBuildSetting**
+
+**Setup Bundle Informations**
+
+**Build And Editor Simulation**
+
+**Multiple Settings**
+
+Multiple AssetbundleSettings are supported./
+You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref)./
+You can find active AssetbundleBuildSetting in menu.
+
+
+## API Examples
 \
 **Initialization Example**
 ```cs
