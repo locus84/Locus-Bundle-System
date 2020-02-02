@@ -44,23 +44,23 @@ It also can be changed later on by patching.
 
         //show some ongui elements for debugging
         BundleManager.ShowDebugGUI = true;
-
+        
         //initialize bundle system & load local bundles
         yield return BundleManager.Initialize();
 
         //get download size from latest bundle manifest
-        var sizeReq = BundleManager.GetDownloadSize();
-        yield return sizeReq;
-        if (!sizeReq.Succeeded)
+        var manifestReq = BundleManager.GetManifest();
+        yield return manifestReq;
+        if (!manifestReq.Succeeded)
         {
             //handle error
-            Debug.LogError(sizeReq.ErrorCode);
+            Debug.LogError(manifestReq.ErrorCode);
         }
 
-        Debug.Log($"Need to download {sizeReq.Result * 0.000001f } mb");
+        Debug.Log($"Need to download { BundleManager.GetDownloadSize(manifestReq.Result) * 0.000001f } mb");
 
         //start downloading
-        var downloadReq = BundleManager.DownloadAssetBundles();
+        var downloadReq = BundleManager.DownloadAssetBundles(manifestReq.Result);
         while(!downloadReq.IsDone)
         {
             if(downloadReq.CurrentCount >= 0)
@@ -71,6 +71,7 @@ It also can be changed later on by patching.
             }
             yield return null;
         }
+        
         if(!downloadReq.Succeeded)
         {
             //handle error
@@ -144,7 +145,7 @@ There is also MessageFiber<T\> class for better performance. Take a look.
 
 ## Installation
 
-Use Unity Package Manager to use it as is.
+Use Unity Package Manager to use it as is.\
 If you want to modify, clone it into your project's *Packages* folder.
 
 ## License
