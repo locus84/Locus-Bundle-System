@@ -3,14 +3,14 @@
 Assetbundle system from unity5 will be obsolute in future.\
 Unity Addressables system provides very flexible implementation that fits on any project.\
 But for my experience, there's huge learning curve to get into it.\
-And also, there's no synchronized api which is familier to **Resource.Load** Users.\
+And also, there's no synchronized api which is familier to **Resource.Load** Users.
 
-So here is my own bundle system that also utilizes Scriptable Build Pipline and it provides synchronized API.\
+So here is my own bundle system that also utilizes Scriptable Build Pipline and it provides synchronized API.
 
 This is build up to support very common senarios I've experienced.\
-But you can extend this on purpose.(just fork and make modifications)\
+But you can extend this on purpose.(just fork and make modifications)
 
-Notice! It caches assetbundles so eats some memory(but quite low)\
+Notice! It caches assetbundles so eats some memory(but quite low)
 
 <br />
 
