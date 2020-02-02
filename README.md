@@ -38,7 +38,8 @@ It also can be changed later on by patching.
 
 **Create AssetbundleBuildSetting**
 
-![CreateSetting](https://user-images.githubusercontent.com/6591432/73616926-a5c04c00-465c-11ea-9efe-a9cca0c6d88c.png)
+![CreateSetting](https://user-images.githubusercontent.com/6591432/73616926-a5c04c00-465c-11ea-9efe-a9cca0c6d88c.png)\
+
 **Setup Bundle Informations**
 
 ![BundleSettingInspector](https://user-images.githubusercontent.com/6591432/73616925-a527b580-465c-11ea-8c82-b004e3822d98.png)
@@ -47,8 +48,8 @@ It also can be changed later on by patching.
 
 **Multiple Settings**
 
-![FindActiveSetting](https://user-images.githubusercontent.com/6591432/73616927-a5c04c00-465c-11ea-9689-3b8e5cdd4970.png)
-![ActiveSetting](https://user-images.githubusercontent.com/6591432/73616924-a527b580-465c-11ea-8cff-a4bfa60faf0a.png)
+![FindActiveSetting](https://user-images.githubusercontent.com/6591432/73616927-a5c04c00-465c-11ea-9689-3b8e5cdd4970.png)\
+![ActiveSetting](https://user-images.githubusercontent.com/6591432/73616924-a527b580-465c-11ea-8cff-a4bfa60faf0a.png)\
 Multiple AssetbundleSettings are supported.\
 You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref).\
 You can find active AssetbundleBuildSetting in menu.
