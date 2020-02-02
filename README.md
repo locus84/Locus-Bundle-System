@@ -155,8 +155,6 @@ You can find active AssetbundleBuildSetting in menu.
     }
 ```
 
-There is also MessageFiber<T\> class for better performance. Take a look.
-\
 <br />
 
 ## Installation
