@@ -38,9 +38,8 @@ It also can be changed later on by patching.
 
 **Create AssetbundleBuildSetting**
 
-![CreateSetting](https://user-images.githubusercontent.com/6591432/73616926-a5c04c00-465c-11ea-9efe-a9cca0c6d88c.png)
-
-Create AssetBundleSettings ScriptableObject using Context Menu./
+*Assets -> Create -> Create Bundle Build Settings*\
+Create AssetBundleSettings ScriptableObject using Context Menu.\
 This object can be anywhere under Assets folder
 
 **Setup Bundle Informations**
