@@ -48,20 +48,20 @@ This object can be anywhere under Assets folder
 ![BundleSettingInspector](https://user-images.githubusercontent.com/6591432/73616925-a527b580-465c-11ea-8c82-b004e3822d98.png)
 
 1. Bundle List\
-   - BundleName : Assetbundle's name which you should provide when loading object from AssetBundles.\
-   - Included In Player : if true, this bundle will be shipped with player(also can be updated)\
-   - Folder : Drag or select folder, assets under that folder will be packed into this bundle.\
-   - Include Subfolder : if true, will search assets from subfolders recurviely, your asset name when loading will be [FolderPath]/[AssetName]\
-   - Compress Bundle : if true, it will use LMZA compression. otherwise LZ4 is used. Shipped local bundles will be always LZ4\
-2. Output Folder and URL\
-   - Specify your Local/Remote bundle build output path here, also provide Remote URL for remote patch.\
-3. Editor Functionalities\
-   - Emulate In Editor : Use and Update actual assetbundles like you do in built player.\
-   - Emulate Without Remote URL : if true, remote bundle will be loaded from remote output path, useful when your CDN is not ready yet.\
-   - Clean Cache In Editor : if true, clean up cache when initializing.\
-   - Force Rebuild : Disables BuildCache (When Scriptable Build Pipline ignores your modification, turn it on. It barely happens though)\
-4. Useful Utilities.\
-   - Cache Server : Cache server setting for faster bundle build(you need seperate Cache server along with asset cache server)\
+   - BundleName : Assetbundle's name which you should provide when loading object from AssetBundles.
+   - Included In Player : if true, this bundle will be shipped with player(also can be updated).
+   - Folder : Drag or select folder, assets under that folder will be packed into this bundle.
+   - Include Subfolder : if true, will search assets from subfolders recurviely, your asset name when loading will be [FolderPath]/[AssetName]
+   - Compress Bundle : if true, it will use LMZA compression. otherwise LZ4 is used. Shipped local bundles will be always LZ4
+2. Output Folder and URL
+   - Specify your Local/Remote bundle build output path here, also provide Remote URL for remote patch.
+3. Editor Functionalities
+   - Emulate In Editor : Use and Update actual assetbundles like you do in built player.
+   - Emulate Without Remote URL : if true, remote bundle will be loaded from remote output path, useful when your CDN is not ready yet.
+   - Clean Cache In Editor : if true, clean up cache when initializing.
+   - Force Rebuild : Disables BuildCache (When Scriptable Build Pipline ignores your modification, turn it on. It barely happens though)
+4. Useful Utilities.
+   - Cache Server : Cache server setting for faster bundle build(you need seperate Cache server along with asset cache server)
    - Ftp : if you have ftp information, upload your remote bundle with single click.
 
 **Build And Editor Simulation**
