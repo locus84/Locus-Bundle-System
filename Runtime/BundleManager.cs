@@ -51,7 +51,7 @@ namespace BundleSystem
         public static string GlobalBundleHash { get; private set; }
 
         public static bool AutoReloadBundle { get; private set; } = true;
-        public static bool LogMessages { get; private set; } = false;
+        public static bool LogMessages { get; set; }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Setup()
@@ -84,14 +84,14 @@ namespace BundleSystem
             s_AssetBundles.Clear();
         }
 
-        public static BundleAsyncOperation Initialize(bool autoReloadBundle = true, bool logMessages = false)
+        public static BundleAsyncOperation Initialize(bool autoReloadBundle = true)
         {
             var result = new BundleAsyncOperation();
-            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result, autoReloadBundle, logMessages));
+            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result, autoReloadBundle));
             return result;
         }
 
-        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, bool autoReloadBundle, bool logMessages)
+        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, bool autoReloadBundle)
         {
             if(Initialized)
             {
@@ -99,7 +99,6 @@ namespace BundleSystem
                 yield break;
             }
 
-            LogMessages = logMessages;
             AutoReloadBundle = autoReloadBundle;
 
             if(UseAssetDatabase)
@@ -180,6 +179,10 @@ namespace BundleSystem
             }
 
             RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget);
+#if UNITY_EDITOR
+            if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
+                RemoteURL = Path.Combine(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+#endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
             result.Done(BundleErrorCode.Success);

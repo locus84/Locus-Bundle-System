@@ -7,8 +7,6 @@ namespace BundleSystem
 {
     public static partial class BundleManager
     {
-        private static HashSet<System.Type> s_NonDirectReleasableTypes = new HashSet<System.Type>() { typeof(GameObject), typeof(Component) };
-
         //weak refernce pool to reduce allocation
         private static Stack<System.WeakReference> s_WeakRefPool = new Stack<System.WeakReference>(50);
         //bundle ref count
@@ -113,11 +111,6 @@ namespace BundleSystem
                     s_TrackingObjects.Remove(id);
                     ReleaseBundleInternal(trackingObject.Bundle, 1);
                     s_WeakRefPool.Push(trackingObject.WeakRef);
-                    if(!s_NonDirectReleasableTypes.Contains(obj.GetType()))
-                    {
-                        if (LogMessages) Debug.Log($"Unloading {obj}");
-                        Resources.UnloadAsset(obj);
-                    }
                 }
                 else
                 {

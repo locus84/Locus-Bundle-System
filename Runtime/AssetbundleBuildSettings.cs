@@ -108,13 +108,17 @@ namespace BundleSystem
         [Tooltip("Remote URL for downloading remote bundles")]
         public string RemoteURL = "http://localhost/";
 
-        [Tooltip("Use built asset bundles even in editor (Remote bundles will be download too)")]
+        [Tooltip("Use built asset bundles even in editor")]
         public bool EmulateInEditor = false;
+
+        [Tooltip("Use Remote output folder when emulating remote bundles")]
+        public bool EmulateWithoutRemoteURL = false;
 
         [Tooltip("Clean cache when initializing BundleManager for testing purpose")]
         public bool CleanCacheInEditor = false;
 
         //build cache server settings
+        public bool ForceRebuild = false;
         public bool UseCacheServer = false;
         public string CacheServerHost;
         public int CacheServerPort;
