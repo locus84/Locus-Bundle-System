@@ -49,7 +49,7 @@ This object can be anywhere under Assets folder
    - BundleName : Assetbundle's name which you should provide when loading object from AssetBundles.
    - Included In Player : if true, this bundle will be shipped with player(also can be updated).
    - Folder : Drag or select folder, assets under that folder will be packed into this bundle.
-   - Include Subfolder : if true, will search assets from subfolders recurviely, your asset name when loading will be [FolderPath]/[AssetName]
+   - Include Subfolder : if true, will search assets from subfolders recurviely, your asset name when loading will be [SubFolderPath]/[AssetName]
    - Compress Bundle : if true, it will use LMZA compression. otherwise LZ4 is used. Shipped local bundles will be always LZ4
    
 2. *Output Folder and URL*
