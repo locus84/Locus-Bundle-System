@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace BundleSystem
 {
-    public partial class BundleManager : MonoBehaviour
+    public static partial class BundleManager
     {
         struct TupleObjectKey : IEqualityComparer<TupleObjectKey>
         {

@@ -10,10 +10,10 @@ namespace BundleSystem
     /// Handle Resources expecially assetbundles.
     /// Also works in editor
     /// </summary>
-    public partial class BundleManager : MonoBehaviour
+    public static partial class BundleManager
     {
         //instance is almost only for coroutines
-        private static BundleManager s_Instance { get; set; }
+        private static BundleManagerHelper s_Helper { get; set; }
 
         class LoadedBundle
         {
@@ -56,8 +56,8 @@ namespace BundleSystem
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += TrackOnSceneLoaded;
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += TrackOnSceneUnLoaded;
-            s_Instance = new GameObject("_BundleManager").AddComponent<BundleManager>();
-            DontDestroyOnLoad(s_Instance.gameObject);
+            s_Helper = new GameObject("_BundleManager").AddComponent<BundleManagerHelper>();
+            GameObject.DontDestroyOnLoad(s_Helper.gameObject);
             LocalURL = Application.platform == RuntimePlatform.IPhonePlayer ? "file://" + AssetbundleBuildSettings.LocalBundleRuntimePath : AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
@@ -71,7 +71,7 @@ namespace BundleSystem
             foreach (var scene in scenes) s_SceneNames[scene] = loadedBundle;
         }
 
-        private void OnDestroy()
+        private static void OnDestroy()
         {
             foreach (var kv in s_AssetBundles)
                 kv.Value.Bundle.Unload(false);
@@ -81,11 +81,11 @@ namespace BundleSystem
         public static BundleAsyncOperation Initialize(bool autoReloadBundle = true, bool logMessages = false)
         {
             var result = new BundleAsyncOperation();
-            s_Instance.StartCoroutine(s_Instance.CoInitalizeLocalBundles(result, autoReloadBundle, logMessages));
+            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result, autoReloadBundle, logMessages));
             return result;
         }
 
-        IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, bool autoReloadBundle, bool logMessages)
+        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, bool autoReloadBundle, bool logMessages)
         {
             if(Initialized)
             {
@@ -182,11 +182,11 @@ namespace BundleSystem
         public static BundleAsyncOperation<long> GetDownloadSize()
         {
             var result = new BundleAsyncOperation<long>();
-            s_Instance.StartCoroutine(s_Instance.GetDownloadSize(result));
+            s_Helper.StartCoroutine(GetDownloadSize(result));
             return result;
         }
 
-        IEnumerator GetDownloadSize(BundleAsyncOperation<long> result)
+        static IEnumerator GetDownloadSize(BundleAsyncOperation<long> result)
         {
             if (!Initialized)
             {
@@ -242,11 +242,11 @@ namespace BundleSystem
         public static BundleAsyncOperation<bool> DownloadAssetBundles(bool hardUnload = false)
         {
             var result = new BundleAsyncOperation<bool>();
-            s_Instance.StartCoroutine(s_Instance.CoDownloadAssetBundles(hardUnload, result));
+            s_Helper.StartCoroutine(CoDownloadAssetBundles(hardUnload, result));
             return result;
         }
 
-        IEnumerator CoDownloadAssetBundles(bool hardUnload, BundleAsyncOperation<bool> result)
+        static IEnumerator CoDownloadAssetBundles(bool hardUnload, BundleAsyncOperation<bool> result)
         {
             if (!Initialized)
             {
@@ -344,6 +344,20 @@ namespace BundleSystem
             PlayerPrefs.Save();
             result.Result = bundleReplaced;
             result.Done(BundleErrorCode.Success);
+        }
+
+        //helper class for coroutine and callbacks
+        private class BundleManagerHelper : MonoBehaviour
+        {
+            private void Update()
+            {
+                BundleManager.Update();
+            }
+
+            private void OnDestroy()
+            {
+                BundleManager.OnDestroy();
+            }
         }
     }
 }

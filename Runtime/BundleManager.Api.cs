@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace BundleSystem
 {
-    public partial class BundleManager : MonoBehaviour
+    public static partial class BundleManager
     {
 #if UNITY_EDITOR
         private static AssetbundleBuildSettings s_EditorBuildSettings;

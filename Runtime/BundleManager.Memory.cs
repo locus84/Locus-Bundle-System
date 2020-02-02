@@ -5,7 +5,7 @@ using UnityEngine.Networking;
 
 namespace BundleSystem
 {
-    public partial class BundleManager : MonoBehaviour
+    public static partial class BundleManager
     {
         private static HashSet<System.Type> s_NonDirectReleasableTypes = new HashSet<System.Type>() { typeof(GameObject), typeof(Component) };
 
@@ -213,13 +213,13 @@ namespace BundleSystem
                 if (s_BundleRefCounts.ContainsKey(refBundleName))
                 {
                     s_BundleRefCounts[refBundleName] -= count;
-                    if (s_BundleRefCounts[refBundleName] <= 0) s_Instance.ReloadBundle(refBundleName);
+                    if (s_BundleRefCounts[refBundleName] <= 0) ReloadBundle(refBundleName);
                 }
             }
         }
 
         //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
-        private void Update()
+        private static void Update()
         {
             //first, owner
             {
@@ -262,7 +262,7 @@ namespace BundleSystem
             }
         }
 
-        private void ReloadBundle(string bundleName)
+        private static void ReloadBundle(string bundleName)
         {
             if (!AutoReloadBundle) return;
 
@@ -288,11 +288,11 @@ namespace BundleSystem
             }
             else
             {
-                StartCoroutine(ReloadBundle(bundleName, loadedBundle));
+                s_Helper.StartCoroutine(ReloadBundle(bundleName, loadedBundle));
             }
         }
 
-        IEnumerator ReloadBundle(string bundleName, LoadedBundle loadedBundle)
+        static IEnumerator ReloadBundle(string bundleName, LoadedBundle loadedBundle)
         {
             if (LogMessages) Debug.Log($"Start Reloading Bundle {bundleName}");
             var bundleReq = loadedBundle.IsLocalBundle? UnityWebRequestAssetBundle.GetAssetBundle(loadedBundle.LoadPath) : 

@@ -18,7 +18,7 @@ namespace BundleSystem
         }
     }
 
-    public partial class BundleManager : MonoBehaviour
+    public static partial class BundleManager
     {
         internal static void DrawDebugGUI()
         {
