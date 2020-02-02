@@ -36,9 +36,8 @@ It also can be changed later on by patching.
 
 ## How to Setup 
 
-**Create AssetbundleBuildSetting**
+**Assets -> Create -> Create Bundle Build Settings**
 
-*Assets -> Create -> Create Bundle Build Settings*\
 Create AssetBundleSettings ScriptableObject using Context Menu.\
 This object can be anywhere under Assets folder
 
