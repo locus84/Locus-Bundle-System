@@ -96,14 +96,22 @@ namespace BundleSystem
         /// output folder inside project
         /// </summary>
         [SerializeField]
+        [Tooltip("Remote bundle build output folder")]
         string m_RemoteOutputFolder = "RemoteBundles";
         /// <summary>
         /// output folder inside project
         /// </summary>
         [SerializeField]
+        [Tooltip("Local bundle build output folder")]
         string m_LocalOutputFolder = "LocalBundles";
+
+        [Tooltip("Remote URL for downloading remote bundles")]
         public string RemoteURL = "http://localhost/";
+
+        [Tooltip("Use built asset bundles even in editor (Remote bundles will be download too)")]
         public bool EmulateInEditor = false;
+
+        [Tooltip("Clean cache when initializing BundleManager for testing purpose")]
         public bool CleanCacheInEditor = false;
 
         //build cache server settings

@@ -113,20 +113,20 @@ namespace BundleSystem
             if(AssetbundleBuildSettings.EditorInstance == settings)
             {
                 EditorGUILayout.BeginHorizontal();
-                if (allowBuild && GUILayout.Button("Build Asset Bundles"))
+                if (allowBuild && GUILayout.Button("Build Remote"))
                 {
                     AssetbundleBuilder.BuildAssetBundles(settings);
                     GUIUtility.ExitGUI();
                 }
 
-                if (allowBuild && GUILayout.Button("Perform Local Build"))
+                if (allowBuild && GUILayout.Button("Build Local"))
                 {
                     AssetbundleBuilder.BuildAssetBundles(settings, true);
                     GUIUtility.ExitGUI();
                 }
 
                 EditorGUI.BeginDisabledGroup(!settings.UseFtp);
-                if (allowBuild && GUILayout.Button("Upload Assetbundles"))
+                if (allowBuild && GUILayout.Button("Upload(FTP)"))
                 {
                     AssetbundleUploader.UploadAllRemoteFiles(settings);
                     GUIUtility.ExitGUI();
