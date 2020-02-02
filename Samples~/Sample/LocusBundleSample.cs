@@ -8,6 +8,18 @@ public class LocusBundleSample : MonoBehaviour
     // Start is called before the first frame update
     IEnumerator Start()
     {
+        var intPtr = System.Runtime.InteropServices.Marshal.AllocHGlobal(1);
+        if (intPtr != System.IntPtr.Zero)
+        {
+            Debug.Log("NotNull");
+        }
+        System.Runtime.InteropServices.Marshal.FreeHGlobal(intPtr);
+        if(intPtr == System.IntPtr.Zero)
+        {
+            Debug.Log("Null");
+        }
+        //System.Runtime.InteropServices.Marshal.FreeHGlobal(intPtr);
+
         //initialize bundle system & load local bundles
         yield return BundleManager.Initialize();
 
@@ -42,15 +54,19 @@ public class LocusBundleSample : MonoBehaviour
         //start to game
     }
 
-    void LoadObject()
+    private void Update()
     {
-        var loaded = BundleManager.Load<Texture2D>("Texture", "TestTexture");
-        //do something
-        BundleManager.ReleaseObject(loaded);
+        if (Input.GetKeyDown(KeyCode.Space)) BundleManager.ShowDebugGUI = !BundleManager.ShowDebugGUI;
     }
 
-    IEnumerator LoadObjectAsync()
+    IEnumerator SampleUsage()
     {
+        {
+            var loaded = BundleManager.Load<Texture2D>("Texture", "TestTexture");
+            //do something
+            BundleManager.ReleaseObject(loaded);
+        }
+
         {
             var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TestTexture");
             yield return loadReq;
@@ -60,15 +76,12 @@ public class LocusBundleSample : MonoBehaviour
         
         {
             //use using clause for easier release
-            using (var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TestTexture"))
+            using (var loadReq = BundleManager.LoadAsync<GameObject>("GameObjects", "TestGameObject"))
             {
                 yield return loadReq;
+                var instantiated = BundleManager.Instantiate(loadReq.Asset);
                 //do something
             }
         }
-    }
-
-    void InstantiateGameObject()
-    {
     }
 }

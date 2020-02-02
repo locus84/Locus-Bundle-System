@@ -14,6 +14,7 @@ namespace BundleSystem
     {
         //instance is almost only for coroutines
         private static BundleManagerHelper s_Helper { get; set; }
+        private static DebugGuiHelper s_DebugGUI { get; set; }
 
         class LoadedBundle
         {
@@ -51,13 +52,18 @@ namespace BundleSystem
 
         public static bool AutoReloadBundle { get; private set; } = true;
         public static bool LogMessages { get; private set; } = false;
+        
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Setup()
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += TrackOnSceneLoaded;
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += TrackOnSceneUnLoaded;
-            s_Helper = new GameObject("_BundleManager").AddComponent<BundleManagerHelper>();
-            GameObject.DontDestroyOnLoad(s_Helper.gameObject);
+
+            var managerGo = new GameObject("_BundleManager");
+            GameObject.DontDestroyOnLoad(managerGo);
+            s_Helper = managerGo.AddComponent<BundleManagerHelper>();
+            s_DebugGUI = managerGo.AddComponent<DebugGuiHelper>();
+            s_DebugGUI.enabled = s_ShowDebugGUI;
             LocalURL = Application.platform == RuntimePlatform.IPhonePlayer ? "file://" + AssetbundleBuildSettings.LocalBundleRuntimePath : AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
@@ -359,5 +365,7 @@ namespace BundleSystem
                 BundleManager.OnDestroy();
             }
         }
+
+        
     }
 }
