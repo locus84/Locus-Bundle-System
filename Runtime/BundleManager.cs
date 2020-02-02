@@ -185,14 +185,14 @@ namespace BundleSystem
             result.Done(BundleErrorCode.Success);
         }
 
-        public static BundleAsyncOperation<long> GetDownloadSize()
+        public static BundleAsyncOperation<AssetbundleBuildManifest> GetManifest()
         {
-            var result = new BundleAsyncOperation<long>();
-            s_Helper.StartCoroutine(GetDownloadSize(result));
+            var result = new BundleAsyncOperation<AssetbundleBuildManifest>();
+            s_Helper.StartCoroutine(CoGetManifest(result));
             return result;
         }
 
-        static IEnumerator GetDownloadSize(BundleAsyncOperation<long> result)
+        static IEnumerator CoGetManifest(BundleAsyncOperation<AssetbundleBuildManifest> result)
         {
             if (!Initialized)
             {
@@ -203,6 +203,7 @@ namespace BundleSystem
 
             if (UseAssetDatabase)
             {
+                result.Result = new AssetbundleBuildManifest();
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
@@ -225,19 +226,29 @@ namespace BundleSystem
                 yield break;
             }
 
+            result.Result = remoteManifest;
+            result.Done(BundleErrorCode.Success);
+        }
+
+        //Get download size of 
+        public static long GetDownloadSize(AssetbundleBuildManifest manifest)
+        {
+            if (!Initialized)
+            {
+                throw new System.Exception("BundleManager is not initialized");
+            }
+
             long totalSize = 0;
 
-            for (int i = 0; i < remoteManifest.BundleInfos.Count; i++)
+            for (int i = 0; i < manifest.BundleInfos.Count; i++)
             {
-                result.SetCurrentIndex(i);
-                var bundleInfo = remoteManifest.BundleInfos[i];
+                var bundleInfo = manifest.BundleInfos[i];
                 var localBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
                 if (!localBundle && !Caching.IsVersionCached(bundleInfo.AsCached))
                     totalSize += bundleInfo.Size;
             }
 
-            result.Result = totalSize;
-            result.Done(BundleErrorCode.Success);
+            return totalSize;
         }
 
         /// <summary>
