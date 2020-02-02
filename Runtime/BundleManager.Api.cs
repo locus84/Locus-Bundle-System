@@ -19,8 +19,10 @@ namespace BundleSystem
             s_EditorBuildSettings = AssetbundleBuildSettings.EditorInstance;
             if (s_EditorBuildSettings == null || !s_EditorBuildSettings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
 
-            if (s_EditorBuildSettings.CleanCacheInEditor) 
+            if (s_EditorBuildSettings.CleanCacheInEditor)
+            {
                 Caching.ClearCache();
+            }
 
             UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
 

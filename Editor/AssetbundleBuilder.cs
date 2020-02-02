@@ -65,7 +65,9 @@ namespace BundleSystem
             var outputPath = Path.Combine(local? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, local);
 
-            if (settings.UseCacheServer)
+            buildParams.UseCache = !settings.ForceRebuild;
+
+            if (buildParams.UseCache && settings.UseCacheServer)
             {
                 buildParams.CacheServerHost = settings.CacheServerHost;
                 buildParams.CacheServerPort = settings.CacheServerPort;

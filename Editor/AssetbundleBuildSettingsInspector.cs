@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEditorInternal;
 using System.Linq;
+using UnityEditor.Build.Pipeline.Utilities;
 
 namespace BundleSystem
 {
@@ -13,10 +14,12 @@ namespace BundleSystem
         SerializedProperty m_RemoteOutputPath;
         SerializedProperty m_LocalOutputPath;
         SerializedProperty m_EmulateBundle;
+        SerializedProperty m_EmulateUseRemoteFolder;
         SerializedProperty m_CleanCache;
         SerializedProperty m_RemoteURL;
         ReorderableList list;
 
+        SerializedProperty m_ForceRebuld;
         SerializedProperty m_UseCacheServer;
         SerializedProperty m_CacheServerHost;
         SerializedProperty m_CacheServerPort;
@@ -39,9 +42,11 @@ namespace BundleSystem
             m_RemoteOutputPath = serializedObject.FindProperty("m_RemoteOutputFolder");
             m_LocalOutputPath = serializedObject.FindProperty("m_LocalOutputFolder");
             m_EmulateBundle = serializedObject.FindProperty("EmulateInEditor");
+            m_EmulateUseRemoteFolder = serializedObject.FindProperty("EmulateWithoutRemoteURL");
             m_CleanCache = serializedObject.FindProperty("CleanCacheInEditor");
             m_RemoteURL = serializedObject.FindProperty("RemoteURL");
 
+            m_ForceRebuld = serializedObject.FindProperty("ForceRebuild");
             m_UseCacheServer = serializedObject.FindProperty("UseCacheServer");
             m_CacheServerHost = serializedObject.FindProperty("CacheServerHost");
             m_CacheServerPort = serializedObject.FindProperty("CacheServerPort");
@@ -84,9 +89,12 @@ namespace BundleSystem
             EditorGUILayout.PropertyField(m_RemoteOutputPath);
             EditorGUILayout.PropertyField(m_LocalOutputPath);
             EditorGUILayout.PropertyField(m_RemoteURL);
+            EditorGUILayout.Space(10);
             EditorGUILayout.PropertyField(m_EmulateBundle);
+            EditorGUILayout.PropertyField(m_EmulateUseRemoteFolder);
             EditorGUILayout.PropertyField(m_CleanCache);
-
+            EditorGUILayout.PropertyField(m_ForceRebuld);
+            EditorGUILayout.Space(10);
             m_UseCacheServer.boolValue = EditorGUILayout.BeginToggleGroup("Cache Server", m_UseCacheServer.boolValue);
             EditorGUILayout.PropertyField(m_CacheServerHost);
             EditorGUILayout.PropertyField(m_CacheServerPort);
