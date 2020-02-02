@@ -44,8 +44,8 @@ It also can be changed later on by patching.
 
 **Multiple Settings**
 
-Multiple AssetbundleSettings are supported./
-You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref)./
+Multiple AssetbundleSettings are supported.\
+You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref).\
 You can find active AssetbundleBuildSetting in menu.
 
 
