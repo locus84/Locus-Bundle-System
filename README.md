@@ -17,23 +17,23 @@ Notice! It caches assetbundles so eats some memory(but quite low)
 \
 **Synchronized API Support!**
 
-Main pros of Unity Addressables system is memory management.
-It unloads bundle according to bundle's reference count.
+Main pros of Unity Addressables system is memory management.\
+It unloads bundle according to bundle's reference count.\
 So you don't need to call Resources.UnloadUnusedAssets() function which hangs your gameplay.
 
-Mine support same functionality as well as synchronized api.
+Mine support same functionality as well as synchronized api.\
 This is done by caching WWWRequest.
 
-When a assetbundle's reference count is zero.
+When a assetbundle's reference count is zero.\
 It fires another assetbundle request and cache up until assetbundle can be unloaded and swapped.
 
 \
 **Folder based Bundle & Local Bundles**
 
-Like using Resources folder, you can specify folder that you want to make bundle(there's no bundle name in each asset).
+Like using Resources folder, you can specify folder that you want to make bundle(there's no bundle name in each asset).\
 It's very comfortable for users that loves organizing contents using Folders like me.
 
-And using local bundles, you can ship part of your bundles in player build.
+And using local bundles, you can ship part of your bundles in player build.\
 It also can be changed later on by patching.
 
 \
@@ -146,14 +146,8 @@ There is also MessageFiber<T\> class for better performance. Take a look.
 
 ## Installation
 
-Download source files and include them into your project.\
-Or use nuget package console.
-
-```
-PM > Install-Package Locus.Threading
-```
-Works too.
-
+Use Unity Package Manager to use it as is.
+If you want to modify, clone it into your project's *Packages* folder.
 
 ## License
 
