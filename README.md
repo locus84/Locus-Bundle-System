@@ -186,7 +186,7 @@ You can find active AssetbundleBuildSetting in menu.
 ## Installation
 
 Use Unity Package Manager to use it as is.\
-To update to latest version, Open up your Packages/manifest.json and delete following part\
+To update to latest version, Open up your Packages/manifest.json and delete following part
 ```json
 "lock": {
     "com.locus.bundlesystem": {
@@ -195,7 +195,7 @@ To update to latest version, Open up your Packages/manifest.json and delete foll
     }
   }
 ```
-If you want to modify, clone it into your project's *Packages* folder.\
+If you want to modify, clone this repo into your project's *Packages* folder.
 
 
 ## License
