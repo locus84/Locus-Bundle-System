@@ -34,6 +34,10 @@ It's very comfortable for users that loves organizing contents using Folders lik
 And using local bundles, you can ship part of your bundles in player build.\
 It also can be changed later on by patching.
 
+## Introduction Video
+
+[![Check this out](http://img.youtube.com/vi/49WKJRscDrA/0.jpg)](http://www.youtube.com/watch?v=49WKJRscDrA "Locus Bundle System Intro")
+
 ## How to Setup 
 
 **Assets -> Create -> Create Bundle Build Settings**
