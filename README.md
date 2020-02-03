@@ -1,5 +1,7 @@
 # Locus Bundle System For Unity
 
+[![openupm](https://img.shields.io/npm/v/com.locus.bundlesystem?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.locus.bundlesystem/)
+
 Assetbundle system from unity5 will be obsolute in future.\
 Unity Addressables system provides very flexible implementation that fits on any project.\
 But for my experience, there's huge learning curve to get into it.\
@@ -188,6 +190,16 @@ You can find active AssetbundleBuildSetting in menu.
 <br />
 
 ## Installation
+
+### Install via OpenUPM
+
+The package is available on the [openupm registry](https://openupm.com). It's recommended to install it via [openupm-cli](https://github.com/openupm/openupm-cli).
+
+```
+openupm add com.locus.bundlesystem
+```
+
+### Install via Git URL
 
 Use Unity Package Manager to use it as is.\
 To update to latest version, Open up your Packages/manifest.json and delete following part
