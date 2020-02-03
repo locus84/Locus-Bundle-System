@@ -52,7 +52,7 @@ namespace BundleSystem
         /// <summary>
         /// This does not included in hash calculation, used to find newer version between cached manifest and local manifest
         /// </summary>
-        public string BundleVersion;
+        public long BuildTime;
         public string RemoteURL;
 
         [SerializeField]

@@ -110,7 +110,6 @@ namespace BundleSystem
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
-
             foreach (var kv in s_AssetBundles)
                 kv.Value.Bundle.Unload(false);
             s_SceneNames.Clear();
@@ -133,7 +132,7 @@ namespace BundleSystem
 
             //cached version is recent one.
             var cacheIsValid = AssetbundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out var cachedManifest) 
-                && cachedManifest.BundleVersion == localManifest.BundleVersion;
+                && cachedManifest.BuildTime > localManifest.BuildTime;
 
             result.SetIndexLength(localManifest.BundleInfos.Count);
             for(int i = 0; i < localManifest.BundleInfos.Count; i++)
@@ -342,6 +341,7 @@ namespace BundleSystem
             Caching.ClearCache((int)timeTook + 600);
             if (LogMessages) Debug.Log($"CacheUsed After CleanUp : {Caching.defaultCache.spaceOccupied} bytes");
 
+            PlayerPrefs.SetString("CachedManifest", JsonUtility.ToJson(remoteManifest));
             GlobalBundleHash = remoteManifest.GlobalHash.ToString();
             result.Result = bundleReplaced;
             result.Done(BundleErrorCode.Success);

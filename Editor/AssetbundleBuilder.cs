@@ -171,7 +171,7 @@ namespace BundleSystem
             manifest.BundleInfos.Sort((a, b) => b.Size.CompareTo(a.Size));
             var manifestString = JsonUtility.ToJson(manifest);
             manifest.GlobalHash = Hash128.Compute(manifestString);
-            manifest.BundleVersion = PlayerSettings.bundleVersion;
+            manifest.BuildTime = DateTime.UtcNow.Ticks;
             manifest.RemoteURL = remoteURL;
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
