@@ -186,7 +186,17 @@ You can find active AssetbundleBuildSetting in menu.
 ## Installation
 
 Use Unity Package Manager to use it as is.\
-If you want to modify, clone it into your project's *Packages* folder.
+To update to latest version, Open up your Packages/manifest.json and delete following part\
+```json
+"lock": {
+    "com.locus.bundlesystem": {
+      "revision": "HEAD",
+      "hash": "7e0cf885f61145eaa20a7901ef9a1cdc60d09438"
+    }
+  }
+```
+If you want to modify, clone it into your project's *Packages* folder.\
+
 
 ## License
 
