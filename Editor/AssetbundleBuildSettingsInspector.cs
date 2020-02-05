@@ -89,12 +89,12 @@ namespace BundleSystem
             EditorGUILayout.PropertyField(m_RemoteOutputPath);
             EditorGUILayout.PropertyField(m_LocalOutputPath);
             EditorGUILayout.PropertyField(m_RemoteURL);
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space();
             EditorGUILayout.PropertyField(m_EmulateBundle);
             EditorGUILayout.PropertyField(m_EmulateUseRemoteFolder);
             EditorGUILayout.PropertyField(m_CleanCache);
             EditorGUILayout.PropertyField(m_ForceRebuld);
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space();
             m_UseCacheServer.boolValue = EditorGUILayout.BeginToggleGroup("Cache Server", m_UseCacheServer.boolValue);
             EditorGUILayout.PropertyField(m_CacheServerHost);
             EditorGUILayout.PropertyField(m_CacheServerPort);
