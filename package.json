@@ -1,7 +1,7 @@
 {
   "name": "com.locus.bundlesystem",
   "displayName": "Locus Bundle System",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simpler Assetbundle Build System using Scriptable Build Pipeline. Alternative to Unity Addressables. \n Visit https://github.com/locus84/Locus-Bundle-System for more informations.",
   "unity": "2018.3",
   "dependencies": {
