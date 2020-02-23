@@ -12,7 +12,6 @@ So here is my own bundle system that also utilizes Scriptable Build Pipline and 
 This is build up to support very common senarios I've experienced.\
 But you can extend this on purpose.(just fork and make modifications)
 
-Not that it caches assetbundles so eats some memory(but quite low)
 
 \
 **Synchronized API Support!**
@@ -22,7 +21,8 @@ It unloads bundle according to bundle's reference count.\
 So you don't need to call Resources.UnloadUnusedAssets() function which hangs your gameplay.
 
 Mine support same functionality as well as synchronized api.\
-This is done by caching WWWRequest.
+This is done by caching WWWRequest.\
+Note that caching assetbundles eats some memory(but quite low)
 
 When a assetbundle's reference count is zero.\
 It fires another assetbundle request and cache up until assetbundle can be unloaded and swapped.
