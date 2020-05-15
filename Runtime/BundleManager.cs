@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using UnityEngine.Networking;
@@ -64,11 +64,12 @@ namespace BundleSystem
             s_Helper = managerGo.AddComponent<BundleManagerHelper>();
             s_DebugGUI = managerGo.AddComponent<DebugGuiHelper>();
             s_DebugGUI.enabled = s_ShowDebugGUI;
-            LocalURL = Application.platform == RuntimePlatform.IPhonePlayer ? "file://" + AssetbundleBuildSettings.LocalBundleRuntimePath : AssetbundleBuildSettings.LocalBundleRuntimePath;
+            LocalURL = AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
             LocalURL = Path.Combine(s_EditorBuildSettings.LocalOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
+            if (Application.platform != RuntimePlatform.Android) LocalURL = "file://" + LocalURL;
         }
 
         static void CollectSceneNames(LoadedBundle loadedBundle)
@@ -180,7 +181,7 @@ namespace BundleSystem
             RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
-                RemoteURL = Path.Combine(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+                RemoteURL = "file://" + Path.Combine(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
