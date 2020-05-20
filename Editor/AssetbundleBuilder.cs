@@ -7,15 +7,27 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.WriteTypes;
 using UnityEngine;
 using System;
+using UnityEngine.SceneManagement;
 
 namespace BundleSystem
 {
+    public enum BuildType
+    {
+        Remote,
+        Local,
+        Dry,
+    }
+
+
     /// <summary>
     /// class that contains actual build functionalities
     /// </summary>
     public static class AssetbundleBuilder
     {
         const string LogFileName = "BundleBuildLog.txt";
+        const string LogDependencyName = "BundleDependencyLog.txt";
+        static AssetbundleBuildSettings s_CurrentBuildingSettings = null;
+        static BuildType s_CurrentBuildType = BuildType.Dry;
 
         class CustomBuildParameters : BundleBuildParameters
         {
@@ -40,14 +52,20 @@ namespace BundleSystem
             }
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSettings settings, bool local = false)
+        public static void BuildAssetBundles(BuildType buildType)
+        {
+            var editorInstance = AssetbundleBuildSettings.EditorInstance;
+            BuildAssetBundles(editorInstance, buildType);
+        }
+
+        public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
         {
             var bundleList = new List<AssetBundleBuild>();
             foreach (var setting in settings.BundleSettings)
             {
                 var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
                 var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
-                if (!dir.Exists) throw new System.Exception($"Could not found Path {folderPath} for {setting.BundleName}");
+                if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
                 var assetPathes = new List<string>();
                 var loadPathes = new List<string>();
                 AssetbundleBuildSettings.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
@@ -62,8 +80,8 @@ namespace BundleSystem
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
-            var outputPath = Path.Combine(local? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, local);
+            var outputPath = Path.Combine(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
+            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, buildType == BuildType.Local);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -73,24 +91,36 @@ namespace BundleSystem
                 buildParams.CacheServerPort = settings.CacheServerPort;
             }
 
-            //do build with post packing callback
-            if (local) ContentPipeline.BuildCallbacks.PostPackingCallback += PostPackingForSelectiveBuild;
+            s_CurrentBuildingSettings = settings;
+            s_CurrentBuildType = buildType;
+            ContentPipeline.BuildCallbacks.PostPackingCallback += PostPackingForSelectiveBuild;
             var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(bundleList.ToArray()), out var results);
-            if (local) ContentPipeline.BuildCallbacks.PostPackingCallback -= PostPackingForSelectiveBuild;
+            ContentPipeline.BuildCallbacks.PostPackingCallback -= PostPackingForSelectiveBuild;
+            
+            if(buildType == BuildType.Dry)
+            {
+                EditorUtility.DisplayDialog("Build Succeeded!", "Dry bundle build succeeded!", "Confirm");
+                return;
+            }
 
             if (returnCode == ReturnCode.Success)
             {
                 WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
                 WriteLogFile(outputPath, results);
                 //only remote bundle build generates link.xml
-                if (local)
+
+                switch(buildType)
                 {
-                    EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
-                }
-                else
-                {
-                    var linkPath = TypeLinkerGenerator.Generate(settings, results);
-                    EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
+                    case BuildType.Local:
+                        EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
+                        break;
+                    case BuildType.Remote:
+                        var linkPath = TypeLinkerGenerator.Generate(settings, results);
+                        EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
+                        break;
+                    case BuildType.Dry:
+                        EditorUtility.DisplayDialog("Build Succeeded!", $"Dry bundle build succeeded", "Confirm");
+                        break;
                 }
             }
             else
@@ -102,46 +132,126 @@ namespace BundleSystem
 
         private static ReturnCode PostPackingForSelectiveBuild(IBuildParameters buildParams, IDependencyData dependencyData, IWriteData writeData)
         {
-            var includedBundles = AssetbundleBuildSettings.EditorInstance.BundleSettings
-                .Where(setting => setting.IncludedInPlayer)
-                .Select(setting => setting.BundleName)
-                .ToList();
+            List<string> includedBundles;
+            if(s_CurrentBuildType == BuildType.Local)
+            {
+                includedBundles = s_CurrentBuildingSettings.BundleSettings
+                    .Where(setting => setting.IncludedInPlayer)
+                    .Select(setting => setting.BundleName)
+                    .ToList();
+            }
+            //if not local build, we include everything
+            else
+            {
+                includedBundles = s_CurrentBuildingSettings.BundleSettings
+                    .Select(setting => setting.BundleName)
+                    .ToList();
+            }
 
             //quick exit 
-            if (includedBundles == null || includedBundles.Count == 0) return ReturnCode.Success;
+            if (includedBundles == null || includedBundles.Count == 0)
+            {
+                Debug.Log("Nothing to build");
+                return ReturnCode.Success;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
+            sb.AppendLine();
+
+            var bundleHashDic = new Dictionary<string, HashSet<GUID>>();
 
             for (int i = writeData.WriteOperations.Count - 1; i >= 0; --i)
             {
                 string bundleName;
+                HashSet<GUID> guidHashSet;
+                switch (writeData.WriteOperations[i])
+                {
+                    case SceneBundleWriteOperation sceneOperation:
+                        bundleName = sceneOperation.Info.bundleName;
+                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
+                        {
+                            guidHashSet = new HashSet<GUID>();
+                            bundleHashDic.Add(bundleName, guidHashSet);
+                        }
 
-                //derive bundle name from operation
-                if (writeData.WriteOperations[i] is AssetBundleWriteOperation bundleOp)
-                {
-                    bundleName = bundleOp.Info.bundleName;
-                }
-                else if (writeData.WriteOperations[i] is SceneBundleWriteOperation sceneBundleOp)
-                {
-                    bundleName = sceneBundleOp.Info.bundleName;
-                }
-                else if (writeData.WriteOperations[i] is SceneDataWriteOperation sceneDataOp)
-                {
-                    //this is the simplest way to derive bundle name from SceneDataWriteOperation
-                    var bundleWriteData = writeData as IBundleWriteData;
-                    bundleName = bundleWriteData.FileToBundle[sceneDataOp.Command.internalName];
-                }
-                else
-                {
-                    Debug.LogError("Unexpected write operation");
-                    return ReturnCode.Error;
+                        foreach (var bundleSceneInfo in sceneOperation.Info.bundleScenes)
+                        {
+                            guidHashSet.Add(bundleSceneInfo.asset);
+                        }
+
+                        foreach (var asset in sceneOperation.PreloadInfo.preloadObjects)
+                        {
+                            if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
+                            guidHashSet.Add(asset.guid);
+                        }
+
+                        break;
+                    case SceneDataWriteOperation sceneDataOperation:
+                        var bundleWriteData = writeData as IBundleWriteData;
+                        bundleName = bundleWriteData.FileToBundle[sceneDataOperation.Command.internalName];
+                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
+                        {
+                            guidHashSet = new HashSet<GUID>();
+                            bundleHashDic.Add(bundleName, guidHashSet);
+                        }
+                        foreach (var identifier in sceneDataOperation.PreloadInfo.preloadObjects)
+                        {
+                            if (identifier.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
+                            guidHashSet.Add(identifier.guid);
+                        }
+                        break;
+                    case AssetBundleWriteOperation assetBundleOperation:
+                        bundleName = assetBundleOperation.Info.bundleName;
+                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
+                        {
+                            guidHashSet = new HashSet<GUID>();
+                            bundleHashDic.Add(bundleName, guidHashSet);
+                        }
+
+                        foreach (var bs in assetBundleOperation.Info.bundleAssets)
+                        {
+                            foreach (var asset in bs.includedObjects)
+                            {
+                                if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
+                                guidHashSet.Add(asset.guid);
+                            }
+
+                            foreach (var asset in bs.referencedObjects)
+                            {
+                                if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
+                                guidHashSet.Add(asset.guid);
+                            }
+                        }
+                        break;
+                    default:
+                        Debug.LogError("Unexpected write operation");
+                        return ReturnCode.Error;
+
                 }
 
                 // if we do not want to build that bundle, remove the write operation from the list
-                if (includedBundles.Contains(bundleName) == false)
+                if (!includedBundles.Contains(bundleName) || s_CurrentBuildType == BuildType.Dry)
                 {
                     writeData.WriteOperations.RemoveAt(i);
                 }
             }
 
+            foreach (var kv in bundleHashDic)
+            {
+                sb.AppendLine($"----File Path : {kv.Key}----");
+
+                foreach (var guid in kv.Value)
+                {
+                    sb.AppendLine($"{(GetCompressedFileSize(guid.ToString()) * 0.000001f).ToString("0.00000").PadLeft(10)} mb - {AssetDatabase.GUIDToAssetPath(guid.ToString())}");
+                }
+
+                sb.AppendLine();
+            }
+
+            var path = Application.dataPath + "/../";
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            File.WriteAllText(Path.Combine(path, LogDependencyName), sb.ToString());
             return ReturnCode.Success;
         }
 
@@ -177,6 +287,19 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
+        public static long GetCompressedFileSize(string guid)
+        {
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                string p = Path.GetFullPath(string.Format("{0}../../Library/metadata/{1}/{2}.resource", Application.dataPath, guid.Substring(0, 2), guid));
+                if (File.Exists(p))
+                {
+                    return new FileInfo(p).Length;
+                }
+            }
+            return 0;
+        }
 
         /// <summary>
         /// write logs into target path.

@@ -130,13 +130,19 @@ namespace BundleSystem
                 EditorGUILayout.BeginHorizontal();
                 if (allowBuild && GUILayout.Button("Build Remote"))
                 {
-                    AssetbundleBuilder.BuildAssetBundles(settings);
+                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Remote);
                     GUIUtility.ExitGUI();
                 }
 
                 if (allowBuild && GUILayout.Button("Build Local"))
                 {
-                    AssetbundleBuilder.BuildAssetBundles(settings, true);
+                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Local);
+                    GUIUtility.ExitGUI();
+                }
+
+                if (allowBuild && GUILayout.Button("Dry Build"))
+                {
+                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Dry);
                     GUIUtility.ExitGUI();
                 }
 
