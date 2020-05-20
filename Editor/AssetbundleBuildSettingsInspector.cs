@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using System.Linq;
 using UnityEditor.Build.Pipeline.Utilities;
+using System.IO;
 
 namespace BundleSystem
 {
@@ -86,8 +87,14 @@ namespace BundleSystem
             var settings = target as AssetbundleBuildSettings;
 
             list.DoLayoutList();
+            GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_RemoteOutputPath);
+            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Path.Combine(settings.RemoteOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_LocalOutputPath);
+            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Path.Combine(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
+            GUILayout.EndHorizontal();
             EditorGUILayout.PropertyField(m_RemoteURL);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(m_EmulateBundle);
