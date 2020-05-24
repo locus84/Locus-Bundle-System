@@ -71,8 +71,6 @@ This object can be anywhere under Assets folder
    - Cache Server : Cache server setting for faster bundle build(you need seperate Cache server along with asset cache server)
    - Ftp : if you have ftp information, upload your remote bundle with single click.
 
-**Build And Editor Simulation**
-
 **Multiple Settings**
 
 ![FindActiveSetting](https://user-images.githubusercontent.com/6591432/73616927-a5c04c00-465c-11ea-9689-3b8e5cdd4970.png)\
@@ -80,6 +78,17 @@ This object can be anywhere under Assets folder
 Multiple AssetbundleSettings are supported.\
 You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref).\
 You can find active AssetbundleBuildSetting in menu.
+
+**Optimize your bundles**
+
+Whenever you build your local/remote bundles,\
+You'll notice BundleDuplicateLog.txt file is generated in your project folder.\
+Which is list of duplicated assets in your bundles.\
+![image](https://user-images.githubusercontent.com/6591432/82748527-80a74300-9ddd-11ea-9ae4-403e6c542894.png)\
+Please refer it and make some optimizations.\
+You can also run 'Dry build' to get this file without additional time.\
+![drybuild](https://user-images.githubusercontent.com/6591432/82748497-4e95e100-9ddd-11ea-8739-ae5bca3c4879.png)
+
 
 ## API Examples
 \
