@@ -7,7 +7,6 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.WriteTypes;
 using UnityEngine;
 using System;
-using UnityEngine.SceneManagement;
 
 namespace BundleSystem
 {
@@ -18,36 +17,33 @@ namespace BundleSystem
         Dry,
     }
 
-
     /// <summary>
     /// class that contains actual build functionalities
     /// </summary>
     public static class AssetbundleBuilder
     {
         const string LogFileName = "BundleBuildLog.txt";
-        const string LogDependencyName = "BundleDependencyLog.txt";
-        static AssetbundleBuildSettings s_CurrentBuildingSettings = null;
-        static BuildType s_CurrentBuildType = BuildType.Dry;
+        const string LogDuplicateFileName = "BundleDuplicateLog.txt";
 
         class CustomBuildParameters : BundleBuildParameters
         {
-            AssetbundleBuildSettings m_Settings;
-            bool m_IsLocal;
+            public AssetbundleBuildSettings CurrentSettings;
+            public BuildType CurrentBuildType;
 
-            public CustomBuildParameters(AssetbundleBuildSettings settings, BuildTarget target, BuildTargetGroup group, string outputFolder, bool isLocal) : base(target, group, outputFolder)
+            public CustomBuildParameters(AssetbundleBuildSettings settings, BuildTarget target, BuildTargetGroup group, string outputFolder, BuildType  buildType) : base(target, group, outputFolder)
             {
-                m_Settings = settings;
-                m_IsLocal = isLocal;
+                CurrentSettings = settings;
+                CurrentBuildType = buildType;
             }
 
             // Override the GetCompressionForIdentifier method with new logic
             public override BuildCompression GetCompressionForIdentifier(string identifier)
             {
                 //local bundles are always lz4 for faster initializing
-                if (m_IsLocal) return BuildCompression.LZ4;
+                if (CurrentBuildType == BuildType.Local) return BuildCompression.LZ4;
 
                 //find user set compression method
-                var found = m_Settings.BundleSettings.FirstOrDefault(setting => setting.BundleName == identifier);
+                var found = CurrentSettings.BundleSettings.FirstOrDefault(setting => setting.BundleName == identifier);
                 return found == null || !found.CompressBundle ? BuildCompression.LZ4 : BuildCompression.LZMA;
             }
         }
@@ -81,7 +77,7 @@ namespace BundleSystem
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
             var outputPath = Path.Combine(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, buildType == BuildType.Local);
+            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, buildType);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -91,30 +87,25 @@ namespace BundleSystem
                 buildParams.CacheServerPort = settings.CacheServerPort;
             }
 
-            s_CurrentBuildingSettings = settings;
-            s_CurrentBuildType = buildType;
             ContentPipeline.BuildCallbacks.PostPackingCallback += PostPackingForSelectiveBuild;
             var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(bundleList.ToArray()), out var results);
             ContentPipeline.BuildCallbacks.PostPackingCallback -= PostPackingForSelectiveBuild;
             
-            if(buildType == BuildType.Dry)
-            {
-                EditorUtility.DisplayDialog("Build Succeeded!", "Dry bundle build succeeded!", "Confirm");
-                return;
-            }
 
             if (returnCode == ReturnCode.Success)
             {
-                WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
-                WriteLogFile(outputPath, results);
                 //only remote bundle build generates link.xml
 
                 switch(buildType)
                 {
                     case BuildType.Local:
+                        WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
+                        WriteLogFile(outputPath, results);
                         EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
                         break;
                     case BuildType.Remote:
+                        WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
+                        WriteLogFile(outputPath, results);
                         var linkPath = TypeLinkerGenerator.Generate(settings, results);
                         EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
                         break;
@@ -132,10 +123,12 @@ namespace BundleSystem
 
         private static ReturnCode PostPackingForSelectiveBuild(IBuildParameters buildParams, IDependencyData dependencyData, IWriteData writeData)
         {
+            var customBuildParams = buildParams as CustomBuildParameters;
+
             List<string> includedBundles;
-            if(s_CurrentBuildType == BuildType.Local)
+            if(customBuildParams.CurrentBuildType == BuildType.Local)
             {
-                includedBundles = s_CurrentBuildingSettings.BundleSettings
+                includedBundles = customBuildParams.CurrentSettings.BundleSettings
                     .Where(setting => setting.IncludedInPlayer)
                     .Select(setting => setting.BundleName)
                     .ToList();
@@ -143,7 +136,7 @@ namespace BundleSystem
             //if not local build, we include everything
             else
             {
-                includedBundles = s_CurrentBuildingSettings.BundleSettings
+                includedBundles = customBuildParams.CurrentSettings.BundleSettings
                     .Select(setting => setting.BundleName)
                     .ToList();
             }
@@ -154,10 +147,6 @@ namespace BundleSystem
                 Debug.Log("Nothing to build");
                 return ReturnCode.Success;
             }
-
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
-            sb.AppendLine();
 
             var bundleHashDic = new Dictionary<string, HashSet<GUID>>();
 
@@ -227,31 +216,18 @@ namespace BundleSystem
                     default:
                         Debug.LogError("Unexpected write operation");
                         return ReturnCode.Error;
-
                 }
 
                 // if we do not want to build that bundle, remove the write operation from the list
-                if (!includedBundles.Contains(bundleName) || s_CurrentBuildType == BuildType.Dry)
+                if (!includedBundles.Contains(bundleName) || customBuildParams.CurrentBuildType == BuildType.Dry)
                 {
                     writeData.WriteOperations.RemoveAt(i);
                 }
             }
 
-            foreach (var kv in bundleHashDic)
-            {
-                sb.AppendLine($"----File Path : {kv.Key}----");
-
-                foreach (var guid in kv.Value)
-                {
-                    sb.AppendLine($"{(GetCompressedFileSize(guid.ToString()) * 0.000001f).ToString("0.00000").PadLeft(10)} mb - {AssetDatabase.GUIDToAssetPath(guid.ToString())}");
-                }
-
-                sb.AppendLine();
-            }
-
-            var path = Application.dataPath + "/../";
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, LogDependencyName), sb.ToString());
+            //log deps file
+            WriteDuplicateLogFile(Application.dataPath + "/../", bundleHashDic);
+            
             return ReturnCode.Success;
         }
 
@@ -287,19 +263,6 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
-        public static long GetCompressedFileSize(string guid)
-        {
-            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-            if (!string.IsNullOrEmpty(assetPath))
-            {
-                string p = Path.GetFullPath(string.Format("{0}../../Library/metadata/{1}/{2}.resource", Application.dataPath, guid.Substring(0, 2), guid));
-                if (File.Exists(p))
-                {
-                    return new FileInfo(p).Length;
-                }
-            }
-            return 0;
-        }
 
         /// <summary>
         /// write logs into target path.
@@ -345,6 +308,49 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(path, LogFileName), sb.ToString());
         }
 
+        /// <summary>
+        /// find out duplicate files in bundle
+        /// </summary>
+        static void WriteDuplicateLogFile(string dirPath, Dictionary<string, HashSet<GUID>> bundleHashDic)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
+            sb.AppendLine($"Assets included multiple times");
+            sb.AppendLine($"[Asset Path] - [Bundle Names included]");
+            sb.AppendLine();
+
+            var duplicateAssetsDic = new Dictionary<GUID, List<string>>();
+
+            foreach (var kv in bundleHashDic)
+            {
+                foreach(var guid in kv.Value)
+                {
+                    List<string> referencedBundles;
+                    if (!duplicateAssetsDic.TryGetValue(guid, out referencedBundles))
+                    {
+                        referencedBundles = new List<string>();
+                        duplicateAssetsDic.Add(guid, referencedBundles);
+                    }
+                    referencedBundles.Add(kv.Key);
+                }
+            }
+
+            //sort by duplicated count
+            var sortedKvList = duplicateAssetsDic.Where(kv => kv.Value.Count > 1).OrderByDescending(kv => kv.Value.Count);
+
+            foreach (var kv in sortedKvList)
+            {
+                var bundles = string.Join(". ", kv.Value);
+                sb.AppendLine($"{AssetDatabase.GUIDToAssetPath(kv.Key.ToString())} - [{bundles}]");
+            }
+
+            if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
+            File.WriteAllText(Path.Combine(dirPath, LogDuplicateFileName), sb.ToString());
+        }
+
+        /// <summary>
+        /// collect bundle deps to actually use in runtime
+        /// </summary>
         static void CollectBundleDependencies(HashSet<string> result, Dictionary<string, List<string>> deps,  string name)
         {
             result.Add(name);
