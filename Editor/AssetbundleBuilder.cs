@@ -360,5 +360,14 @@ namespace BundleSystem
                     CollectBundleDependencies(result, deps, dependency);
             }
         }
+
+        static string CreateSha256(string inputString)
+        {
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            string hash = String.Empty;
+            byte[] crypto = crypt.ComputeHash(System.Text.Encoding.UTF8.GetBytes(inputString));
+            foreach (byte theByte in crypto) hash += theByte.ToString("x2");
+            return hash;
+        }
     }
 }
