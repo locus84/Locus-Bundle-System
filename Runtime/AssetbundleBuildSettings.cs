@@ -57,14 +57,10 @@ namespace BundleSystem
             {
                 var currentFile = files[i];
                 var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6);
-                var mainType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(unityPath);
-                if (mainType == null) continue;
-                if (mainType == typeof(UnityEditor.MonoScript)) continue;
-                if (mainType.IsSubclassOf(typeof(Object)))
-                {
-                    resultAssetPath.Add(unityPath);
-                    resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
-                }
+                if (!IsAssetCanBundled(unityPath)) continue;
+
+                resultAssetPath.Add(unityPath);
+                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
             }
 
             if (includeSubdir)
@@ -74,6 +70,12 @@ namespace BundleSystem
                     GetFilesInDirectory(Path.Combine(dirPrefix, dir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
                 }
             }
+        }
+
+        public static bool IsAssetCanBundled(string assetPath)
+        {
+            var mainType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+            return mainType != null && mainType != typeof(UnityEditor.MonoScript) && mainType.IsSubclassOf(typeof(Object));
         }
 
         /// <summary>

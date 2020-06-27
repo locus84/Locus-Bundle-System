@@ -73,6 +73,9 @@ namespace BundleSystem
                 bundleList.Add(newBundle);
             }
 
+            //generate sharedBundle
+            AssetDependencyTree.AppendSharedBundles(bundleList);
+
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
@@ -219,7 +222,7 @@ namespace BundleSystem
                 }
 
                 // if we do not want to build that bundle, remove the write operation from the list
-                if (!includedBundles.Contains(bundleName) || customBuildParams.CurrentBuildType == BuildType.Dry)
+                if ((customBuildParams.CurrentBuildType == BuildType.Local && !includedBundles.Contains(bundleName)) || customBuildParams.CurrentBuildType == BuildType.Dry)
                 {
                     writeData.WriteOperations.RemoveAt(i);
                 }
@@ -246,7 +249,14 @@ namespace BundleSystem
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 depsCollectCache.Clear();
-                CollectBundleDependencies(depsCollectCache, deps, result.Key);
+
+                //collect actual dependencies(exclude self-will be added in runtime)
+                foreach (var dependency in deps[result.Key])
+                {
+                    if (!depsCollectCache.Contains(dependency))
+                        CollectBundleDependencies(depsCollectCache, deps, dependency);
+                }
+
                 bundleInfo.Dependencies = depsCollectCache.ToList();
                 bundleInfo.Hash = result.Value.Hash;
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
@@ -359,15 +369,6 @@ namespace BundleSystem
                 if (!result.Contains(dependency))
                     CollectBundleDependencies(result, deps, dependency);
             }
-        }
-
-        static string CreateSha256(string inputString)
-        {
-            var crypt = new System.Security.Cryptography.SHA256Managed();
-            string hash = String.Empty;
-            byte[] crypto = crypt.ComputeHash(System.Text.Encoding.UTF8.GetBytes(inputString));
-            foreach (byte theByte in crypto) hash += theByte.ToString("x2");
-            return hash;
         }
     }
 }
