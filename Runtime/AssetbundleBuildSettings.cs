@@ -48,37 +48,6 @@ namespace BundleSystem
         }
 
         /// <summary>
-        /// Search files in directory
-        /// </summary>
-        public static void GetFilesInDirectory(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, DirectoryInfo dir, bool includeSubdir)
-        {
-            var files = dir.GetFiles();
-            for (int i = 0; i < files.Length; i++)
-            {
-                var currentFile = files[i];
-                var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6).Replace('\\', '/');
-                if (!IsAssetCanBundled(unityPath)) continue;
-
-                resultAssetPath.Add(unityPath);
-                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)));
-            }
-
-            if (includeSubdir)
-            {
-                foreach (var subDir in dir.GetDirectories())
-                {
-                    GetFilesInDirectory(Path.Combine(dirPrefix, dir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
-                }
-            }
-        }
-
-        public static bool IsAssetCanBundled(string assetPath)
-        {
-            var mainType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-            return mainType != null && mainType != typeof(UnityEditor.MonoScript) && mainType.IsSubclassOf(typeof(Object));
-        }
-
-        /// <summary>
         /// check setting is valid
         /// </summary>
         public bool IsValid()

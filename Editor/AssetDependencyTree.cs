@@ -98,7 +98,7 @@ namespace BundleSystem
                 foreach (var child in childDeps)
                 {
                     //is not bundled file
-                    if (!AssetbundleBuildSettings.IsAssetCanBundled(child)) continue;
+                    if (!Utility.IsAssetCanBundled(child)) continue;
 
                     //already root node, wont be included multiple times
                     if (context.RootNodes.TryGetValue(child, out var rootNode))

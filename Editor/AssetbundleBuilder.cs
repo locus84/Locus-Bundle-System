@@ -71,7 +71,7 @@ namespace BundleSystem
                 if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
                 var assetPathes = new List<string>();
                 var loadPathes = new List<string>();
-                AssetbundleBuildSettings.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
+                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
                 if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
                 var newBundle = new AssetBundleBuild();
                 newBundle.assetBundleName = setting.BundleName;
@@ -256,7 +256,7 @@ namespace BundleSystem
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 depsCollectCache.Clear();
-                CollectBundleDependencies(depsCollectCache, deps, result.Key);
+                Utility.CollectBundleDependencies(depsCollectCache, deps, result.Key);
                 bundleInfo.Dependencies = depsCollectCache.ToList();
                 bundleInfo.Hash = result.Value.Hash;
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
@@ -358,18 +358,5 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(dirPath, LogDuplicateFileName), sb.ToString());
         }
 
-        /// <summary>
-        /// collect bundle deps to actually use in runtime
-        /// </summary>
-        static void CollectBundleDependencies(HashSet<string> result, Dictionary<string, List<string>> deps,  string name, string rootName = null)
-        {
-            if (string.IsNullOrEmpty(rootName)) rootName = name;
-            foreach(var dependency in deps[name])
-            {
-                if (rootName == dependency) continue;
-                if(result.Add(dependency))
-                    CollectBundleDependencies(result, deps, dependency, rootName);
-            }
-        }
     }
 }
