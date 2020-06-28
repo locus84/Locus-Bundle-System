@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -62,6 +60,9 @@ namespace BundleSystem
         public string RemoteOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_RemoteOutputFolder;
 
         public List<BundleSetting> BundleSettings = new List<BundleSetting>();
+
+        [Tooltip("Auto create shared bundles to remove duplicated assets")]
+        public bool AutoCreateSharedBundles = true;
 
         /// <summary>
         /// output folder inside project

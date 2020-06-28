@@ -10,7 +10,7 @@ namespace BundleSystem
     /// </summary>
     public static class AssetDependencyTree
     {
-        public static Dictionary<string, HashSet<string>> AppendSharedBundles(List<AssetBundleBuild> definedBundles)
+        public static Dictionary<string, HashSet<string>> ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool createShared)
         {
             var context = new Context();
             var rootNodesToProcess = new List<RootNode>();
@@ -30,7 +30,14 @@ namespace BundleSystem
             }
 
             //now, do process
-            foreach (var node in rootNodesToProcess) node.CollectChildNodes(context);
+            if(createShared)
+            {
+                foreach (var node in rootNodesToProcess) node.CollectNodesAndCreateShared(context);
+            }
+            else
+            {
+                foreach (var node in rootNodesToProcess) node.CollectNodes(context);
+            }
 
             //convert found shared node proper struct and append list
             foreach(var sharedRootNode in context.ResultSharedNodes)
@@ -92,7 +99,23 @@ namespace BundleSystem
                 foreach (var kv in Children) kv.Value.RemoveFromTree(context);
             }
 
-            public void CollectChildNodes(Context context)
+            public void CollectNodes(Context context)
+            {
+                var childDeps = AssetDatabase.GetDependencies(Path, true);
+                foreach(var child in childDeps)
+                {
+                    //is not bundled file
+                    if (!Utility.IsAssetCanBundled(child)) continue;
+
+                    //if found among rootnodes, just add deps
+                    if (context.RootNodes.TryGetValue(child, out var root))
+                    {
+                        Root.ReferencedBundleNames.Add(root.BundleName);
+                    }
+                }
+            }
+
+            public void CollectNodesAndCreateShared(Context context)
             {
                 var childDeps = AssetDatabase.GetDependencies(Path, false);
                 foreach (var child in childDeps)
@@ -103,7 +126,7 @@ namespace BundleSystem
                     //already root node, wont be included multiple times
                     if (context.RootNodes.TryGetValue(child, out var rootNode))
                     {
-                        rootNode.ReferencedBundleNames.Add(child);
+                        Root.ReferencedBundleNames.Add(rootNode.Root.BundleName);
                         continue;
                     }
 
@@ -121,13 +144,13 @@ namespace BundleSystem
                             var newRoot = new RootNode(child, newName, depsHash, true);
 
                             //add deps
-                            newRoot.ReferencedBundleNames.Add(node.Root.BundleName);
-                            newRoot.ReferencedBundleNames.Add(Root.BundleName);
+                            node.Root.ReferencedBundleNames.Add(newName);
+                            Root.ReferencedBundleNames.Add(newName);
 
                             context.RootNodes.Add(child, newRoot);
                             context.ResultSharedNodes.Add(newRoot);
                             //is it okay to do here?
-                            newRoot.CollectChildNodes(context);
+                            newRoot.CollectNodesAndCreateShared(context);
                         }
                         continue;
                     }
@@ -135,7 +158,7 @@ namespace BundleSystem
                     //if not, add to indirect node
                     var childNode = new Node(child, Root);
                     context.IndirectNodes.Add(child, childNode);
-                    childNode.CollectChildNodes(context);
+                    childNode.CollectNodesAndCreateShared(context);
                 }
             }
         }

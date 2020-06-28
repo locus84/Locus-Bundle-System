@@ -12,6 +12,7 @@ namespace BundleSystem
     public class AssetbundleBuildSettingsInspector : Editor
     {
         SerializedProperty m_SettingsProperty;
+        SerializedProperty m_AutoCreateSharedBundles;
         SerializedProperty m_RemoteOutputPath;
         SerializedProperty m_LocalOutputPath;
         SerializedProperty m_EmulateBundle;
@@ -40,6 +41,7 @@ namespace BundleSystem
         private void OnEnable()
         {
             m_SettingsProperty = serializedObject.FindProperty("BundleSettings");
+            m_AutoCreateSharedBundles = serializedObject.FindProperty("AutoCreateSharedBundles");
             m_RemoteOutputPath = serializedObject.FindProperty("m_RemoteOutputFolder");
             m_LocalOutputPath = serializedObject.FindProperty("m_LocalOutputFolder");
             m_EmulateBundle = serializedObject.FindProperty("EmulateInEditor");
@@ -87,6 +89,7 @@ namespace BundleSystem
             var settings = target as AssetbundleBuildSettings;
 
             list.DoLayoutList();
+            EditorGUILayout.PropertyField(m_AutoCreateSharedBundles);
             GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_RemoteOutputPath);
             if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Path.Combine(settings.RemoteOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
@@ -102,17 +105,22 @@ namespace BundleSystem
             EditorGUILayout.PropertyField(m_CleanCache);
             EditorGUILayout.PropertyField(m_ForceRebuld);
             EditorGUILayout.Space();
-            m_UseCacheServer.boolValue = EditorGUILayout.BeginToggleGroup("Cache Server", m_UseCacheServer.boolValue);
-            EditorGUILayout.PropertyField(m_CacheServerHost);
-            EditorGUILayout.PropertyField(m_CacheServerPort);
-            EditorGUILayout.EndToggleGroup();
 
-            m_UseFtp.boolValue = EditorGUILayout.BeginToggleGroup("Ftp", m_UseFtp.boolValue);
-            EditorGUILayout.PropertyField(m_FtpHost);
-            EditorGUILayout.PropertyField(m_FtpUser);
-            m_FtpPass.stringValue = EditorGUILayout.PasswordField("Ftp Password", m_FtpPass.stringValue);
-            EditorGUILayout.EndToggleGroup();
+            EditorGUILayout.PropertyField(m_UseCacheServer);
+            if(m_UseCacheServer.boolValue)
+            {
+                EditorGUILayout.PropertyField(m_CacheServerHost);
+                EditorGUILayout.PropertyField(m_CacheServerPort);
+            }
 
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(m_UseFtp);
+            if(m_UseFtp.boolValue)
+            {
+                EditorGUILayout.PropertyField(m_FtpHost);
+                EditorGUILayout.PropertyField(m_FtpUser);
+                m_FtpPass.stringValue = EditorGUILayout.PasswordField("Ftp Password", m_FtpPass.stringValue);
+            }
             bool allowBuild = true;
 
             if (!settings.IsValid())
@@ -140,12 +148,6 @@ namespace BundleSystem
                     GUIUtility.ExitGUI();
                 }
 
-                if (allowBuild && GUILayout.Button("Dry Build"))
-                {
-                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Dry);
-                    GUIUtility.ExitGUI();
-                }
-
                 EditorGUI.BeginDisabledGroup(!settings.UseFtp);
                 if (allowBuild && GUILayout.Button("Upload(FTP)"))
                 {
@@ -153,7 +155,6 @@ namespace BundleSystem
                     GUIUtility.ExitGUI();
                 }
                 EditorGUI.EndDisabledGroup();
-
                 EditorGUILayout.EndHorizontal();
             }
             else

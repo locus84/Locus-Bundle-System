@@ -13,8 +13,7 @@ namespace BundleSystem
     public enum BuildType
     {
         Remote,
-        Local,
-        Dry,
+        Local
     }
 
     /// <summary>
@@ -80,8 +79,8 @@ namespace BundleSystem
                 bundleList.Add(newBundle);
             }
 
-            //generate sharedBundle
-            var deps = AssetDependencyTree.AppendSharedBundles(bundleList);
+            //generate sharedBundle if needed, and pre generate dependency
+            var deps = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles);
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
@@ -119,9 +118,6 @@ namespace BundleSystem
                         var linkPath = TypeLinkerGenerator.Generate(settings, results);
                         EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
                         break;
-                    case BuildType.Dry:
-                        EditorUtility.DisplayDialog("Build Succeeded!", $"Dry bundle build succeeded", "Confirm");
-                        break;
                 }
             }
             else
@@ -134,94 +130,44 @@ namespace BundleSystem
         private static ReturnCode PostPackingForSelectiveBuild(IBuildParameters buildParams, IDependencyData dependencyData, IWriteData writeData)
         {
             var customBuildParams = buildParams as CustomBuildParameters;
+            var depsDic = customBuildParams.DependencyDic;
 
             List<string> includedBundles;
             if(customBuildParams.CurrentBuildType == BuildType.Local)
             {
-                includedBundles = customBuildParams.CurrentSettings.BundleSettings
+                var localBundles = customBuildParams.CurrentSettings.BundleSettings
                     .Where(setting => setting.IncludedInPlayer)
-                    .Select(setting => setting.BundleName)
-                    .ToList();
+                    .Select(setting => setting.BundleName);
+                includedBundles = localBundles.Union(localBundles.SelectMany(name => depsDic[name])).Distinct().ToList();
             }
             //if not local build, we include everything
             else
             {
-                includedBundles = customBuildParams.CurrentSettings.BundleSettings
-                    .Select(setting => setting.BundleName)
-                    .ToList();
+                includedBundles = depsDic.Keys.ToList();
             }
 
             //quick exit 
             if (includedBundles == null || includedBundles.Count == 0)
             {
                 Debug.Log("Nothing to build");
+                writeData.WriteOperations.Clear();
                 return ReturnCode.Success;
             }
-
-            var bundleHashDic = new Dictionary<string, HashSet<GUID>>();
 
             for (int i = writeData.WriteOperations.Count - 1; i >= 0; --i)
             {
                 string bundleName;
-                HashSet<GUID> guidHashSet;
                 switch (writeData.WriteOperations[i])
                 {
                     case SceneBundleWriteOperation sceneOperation:
                         bundleName = sceneOperation.Info.bundleName;
-                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
-                        {
-                            guidHashSet = new HashSet<GUID>();
-                            bundleHashDic.Add(bundleName, guidHashSet);
-                        }
-
-                        foreach (var bundleSceneInfo in sceneOperation.Info.bundleScenes)
-                        {
-                            guidHashSet.Add(bundleSceneInfo.asset);
-                        }
-
-                        foreach (var asset in sceneOperation.PreloadInfo.preloadObjects)
-                        {
-                            if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
-                            guidHashSet.Add(asset.guid);
-                        }
-
                         break;
                     case SceneDataWriteOperation sceneDataOperation:
                         var bundleWriteData = writeData as IBundleWriteData;
                         bundleName = bundleWriteData.FileToBundle[sceneDataOperation.Command.internalName];
-                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
-                        {
-                            guidHashSet = new HashSet<GUID>();
-                            bundleHashDic.Add(bundleName, guidHashSet);
-                        }
-                        foreach (var identifier in sceneDataOperation.PreloadInfo.preloadObjects)
-                        {
-                            if (identifier.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
-                            guidHashSet.Add(identifier.guid);
-                        }
                         break;
                     case AssetBundleWriteOperation assetBundleOperation:
                         bundleName = assetBundleOperation.Info.bundleName;
-                        if (!bundleHashDic.TryGetValue(bundleName, out guidHashSet))
-                        {
-                            guidHashSet = new HashSet<GUID>();
-                            bundleHashDic.Add(bundleName, guidHashSet);
-                        }
-
-                        foreach (var bs in assetBundleOperation.Info.bundleAssets)
-                        {
-                            foreach (var asset in bs.includedObjects)
-                            {
-                                if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
-                                guidHashSet.Add(asset.guid);
-                            }
-
-                            foreach (var asset in bs.referencedObjects)
-                            {
-                                if (asset.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
-                                guidHashSet.Add(asset.guid);
-                            }
-                        }
                         break;
                     default:
                         Debug.LogError("Unexpected write operation");
@@ -229,15 +175,12 @@ namespace BundleSystem
                 }
 
                 // if we do not want to build that bundle, remove the write operation from the list
-                if ((customBuildParams.CurrentBuildType == BuildType.Local && !includedBundles.Contains(bundleName)) || customBuildParams.CurrentBuildType == BuildType.Dry)
+                if ((customBuildParams.CurrentBuildType == BuildType.Local && !includedBundles.Contains(bundleName)))
                 {
                     writeData.WriteOperations.RemoveAt(i);
                 }
             }
 
-            //log deps file
-            WriteDuplicateLogFile(Application.dataPath + "/../", bundleHashDic);
-            
             return ReturnCode.Success;
         }
 
