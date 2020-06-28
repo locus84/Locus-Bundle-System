@@ -29,11 +29,18 @@ namespace BundleSystem
         {
             public AssetbundleBuildSettings CurrentSettings;
             public BuildType CurrentBuildType;
+            public Dictionary<string, HashSet<string>> DependencyDic;
 
-            public CustomBuildParameters(AssetbundleBuildSettings settings, BuildTarget target, BuildTargetGroup group, string outputFolder, BuildType  buildType) : base(target, group, outputFolder)
+            public CustomBuildParameters(AssetbundleBuildSettings settings, 
+                BuildTarget target, 
+                BuildTargetGroup group, 
+                string outputFolder,
+                Dictionary<string, HashSet<string>> deps,
+                BuildType  buildType) : base(target, group, outputFolder)
             {
                 CurrentSettings = settings;
                 CurrentBuildType = buildType;
+                DependencyDic = deps;
             }
 
             // Override the GetCompressionForIdentifier method with new logic
@@ -74,13 +81,13 @@ namespace BundleSystem
             }
 
             //generate sharedBundle
-            AssetDependencyTree.AppendSharedBundles(bundleList);
+            var deps = AssetDependencyTree.AppendSharedBundles(bundleList);
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
             var outputPath = Path.Combine(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, buildType);
+            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, deps, buildType);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -249,14 +256,7 @@ namespace BundleSystem
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 depsCollectCache.Clear();
-
-                //collect actual dependencies(exclude self-will be added in runtime)
-                foreach (var dependency in deps[result.Key])
-                {
-                    if (!depsCollectCache.Contains(dependency))
-                        CollectBundleDependencies(depsCollectCache, deps, dependency);
-                }
-
+                CollectBundleDependencies(depsCollectCache, deps, result.Key);
                 bundleInfo.Dependencies = depsCollectCache.ToList();
                 bundleInfo.Hash = result.Value.Hash;
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
@@ -361,13 +361,14 @@ namespace BundleSystem
         /// <summary>
         /// collect bundle deps to actually use in runtime
         /// </summary>
-        static void CollectBundleDependencies(HashSet<string> result, Dictionary<string, List<string>> deps,  string name)
+        static void CollectBundleDependencies(HashSet<string> result, Dictionary<string, List<string>> deps,  string name, string rootName = null)
         {
-            result.Add(name);
+            if (string.IsNullOrEmpty(rootName)) rootName = name;
             foreach(var dependency in deps[name])
             {
-                if (!result.Contains(dependency))
-                    CollectBundleDependencies(result, deps, dependency);
+                if (rootName == dependency) continue;
+                if(result.Add(dependency))
+                    CollectBundleDependencies(result, deps, dependency, rootName);
             }
         }
     }

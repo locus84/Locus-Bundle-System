@@ -56,11 +56,11 @@ namespace BundleSystem
             for (int i = 0; i < files.Length; i++)
             {
                 var currentFile = files[i];
-                var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6);
+                var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6).Replace('\\', '/');
                 if (!IsAssetCanBundled(unityPath)) continue;
 
                 resultAssetPath.Add(unityPath);
-                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
+                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)));
             }
 
             if (includeSubdir)

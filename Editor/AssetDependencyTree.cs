@@ -10,19 +10,29 @@ namespace BundleSystem
     /// </summary>
     public static class AssetDependencyTree
     {
-        public static void AppendSharedBundles(List<AssetBundleBuild> definedBundles)
+        public static Dictionary<string, HashSet<string>> AppendSharedBundles(List<AssetBundleBuild> definedBundles)
         {
             var context = new Context();
+            var rootNodesToProcess = new List<RootNode>();
+
+            //collecting reference should be done after adding all root nodes
+            //if not, there might be false positive shared bundle that already exist in bundle defines
             foreach(var bundle in definedBundles)
             {
+                var depsHash = new HashSet<string>();
+                context.DependencyDic.Add(bundle.assetBundleName, depsHash);
                 foreach(var asset in bundle.assetNames)
                 {
-                    var rootNode = new RootNode(asset, bundle.assetBundleName, false);
+                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false);
                     context.RootNodes.Add(asset, rootNode);
-                    rootNode.CollectChildNodes(context);
+                    rootNodesToProcess.Add(rootNode);
                 }
             }
 
+            //now, do process
+            foreach (var node in rootNodesToProcess) node.CollectChildNodes(context);
+
+            //convert found shared node proper struct and append list
             foreach(var sharedRootNode in context.ResultSharedNodes)
             {
                 var assetNames = new string[] { sharedRootNode.Path };
@@ -34,11 +44,14 @@ namespace BundleSystem
                 };
                 definedBundles.Add(bundleDefinition);
             }
+
+            return context.DependencyDic;
         }
 
         //actual node tree context
         public class Context
         {
+            public Dictionary<string, HashSet<string>> DependencyDic = new Dictionary<string, HashSet<string>>();
             public Dictionary<string, RootNode> RootNodes = new Dictionary<string, RootNode>();
             public Dictionary<string, Node> IndirectNodes = new Dictionary<string, Node>();
             public List<RootNode> ResultSharedNodes = new List<RootNode>();
@@ -48,13 +61,14 @@ namespace BundleSystem
         {
             public string BundleName { get; private set; }
             public bool IsShared { get; private set; }
-            public HashSet<string> ReferencedBundleNames = new HashSet<string>();
+            public HashSet<string> ReferencedBundleNames;
 
-            public RootNode(string path, string bundleName, bool isShared) : base(path, null)
+            public RootNode(string path, string bundleName, HashSet<string> deps, bool isShared) : base(path, null)
             {
                 IsShared = isShared;
                 BundleName = bundleName;
                 Root = this;
+                ReferencedBundleNames = deps;
             }
         }
 
@@ -100,8 +114,11 @@ namespace BundleSystem
                         if (node.Root.BundleName != Root.BundleName)
                         {
                             node.RemoveFromTree(context);
+
                             var newName = $"Shared_{AssetDatabase.AssetPathToGUID(child)}";
-                            var newRoot = new RootNode(child, newName, true);
+                            var depsHash = new HashSet<string>();
+                            context.DependencyDic.Add(newName, depsHash);
+                            var newRoot = new RootNode(child, newName, depsHash, true);
 
                             //add deps
                             newRoot.ReferencedBundleNames.Add(node.Root.BundleName);
