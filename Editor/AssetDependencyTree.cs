@@ -158,6 +158,7 @@ namespace BundleSystem
                     //if not, add to indirect node
                     var childNode = new Node(child, Root);
                     context.IndirectNodes.Add(child, childNode);
+                    Children.Add(child, childNode);
                     childNode.CollectNodesAndCreateShared(context);
                 }
             }
