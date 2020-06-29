@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.VersionControl;
 
 namespace BundleSystem
 {
     /// <summary>
-    /// this class finds out duplicated assets
+    /// this class finds out duplicated topmost assets
     /// and make them into one single shared bundle one by one(to reduce bundle rebuild)
     /// so that there would be no asset duplicated
     /// </summary>
@@ -36,10 +35,11 @@ namespace BundleSystem
                 }
             }
 
+            //actually analize and create shared bundles
             foreach (var node in rootNodesToProcess) node.CollectNodes(context);
 
             var resultList = new List<AssetBundleBuild>();
-            //convert found shared node proper struct and append list
+            //convert found shared node proper struct
             foreach(var sharedRootNode in context.ResultSharedNodes)
             {
                 var assetNames = new string[] { sharedRootNode.Path };
