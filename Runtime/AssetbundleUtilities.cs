@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace BundleSystem
 {
+    using System.Linq;
 #if UNITY_EDITOR
     using UnityEditor;
     /// <summary>
@@ -48,14 +49,23 @@ namespace BundleSystem
         /// <summary>
         /// collect bundle deps to actually use in runtime
         /// </summary>
-        public static void CollectBundleDependencies<T>(HashSet<string> result, Dictionary<string, T> deps, string name, string rootName = null) where T : IEnumerable<string>
+
+        public static List<string> CollectBundleDependencies<T>(Dictionary<string, T> deps, string name, bool includeSelf = false) where T : IEnumerable<string>
         {
-            if (string.IsNullOrEmpty(rootName)) rootName = name;
+            var depsHash = new HashSet<string>();
+            CollectBundleDependenciesRecursive<T>(depsHash, deps, name, name);
+            if (includeSelf) depsHash.Add(name);
+            return depsHash.ToList();
+        }
+
+        static void CollectBundleDependenciesRecursive<T>(HashSet<string> result, Dictionary<string, T> deps, string name, string rootName) where T : IEnumerable<string>
+        {
             foreach (var dependency in deps[name])
             {
+                //skip root name to prevent cyclic deps calculation
                 if (rootName == dependency) continue;
                 if (result.Add(dependency))
-                    CollectBundleDependencies(result, deps, dependency, rootName);
+                    CollectBundleDependenciesRecursive(result, deps, dependency, rootName);
             }
         }
     }

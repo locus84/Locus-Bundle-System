@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.VersionControl;
 
 namespace BundleSystem
 {
@@ -10,7 +11,13 @@ namespace BundleSystem
     /// </summary>
     public static class AssetDependencyTree
     {
-        public static Dictionary<string, HashSet<string>> ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool createShared)
+        public class ProcessResult
+        {
+            public Dictionary<string, HashSet<string>> BundleDependencies;
+            public List<AssetBundleBuild> SharedBundles;
+        }
+
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles)
         {
             var context = new Context();
             var rootNodesToProcess = new List<RootNode>();
@@ -29,16 +36,9 @@ namespace BundleSystem
                 }
             }
 
-            //now, do process
-            if(createShared)
-            {
-                foreach (var node in rootNodesToProcess) node.CollectNodesAndCreateShared(context);
-            }
-            else
-            {
-                foreach (var node in rootNodesToProcess) node.CollectNodes(context);
-            }
+            foreach (var node in rootNodesToProcess) node.CollectNodes(context);
 
+            var resultList = new List<AssetBundleBuild>();
             //convert found shared node proper struct and append list
             foreach(var sharedRootNode in context.ResultSharedNodes)
             {
@@ -49,10 +49,10 @@ namespace BundleSystem
                     assetNames = assetNames,
                     addressableNames = assetNames
                 };
-                definedBundles.Add(bundleDefinition);
+                resultList.Add(bundleDefinition);
             }
 
-            return context.DependencyDic;
+            return new ProcessResult() { BundleDependencies = context.DependencyDic, SharedBundles = resultList };
         }
 
         //actual node tree context
@@ -101,22 +101,6 @@ namespace BundleSystem
 
             public void CollectNodes(Context context)
             {
-                var childDeps = AssetDatabase.GetDependencies(Path, true);
-                foreach(var child in childDeps)
-                {
-                    //is not bundled file
-                    if (!Utility.IsAssetCanBundled(child)) continue;
-
-                    //if found among rootnodes, just add deps
-                    if (context.RootNodes.TryGetValue(child, out var root))
-                    {
-                        Root.ReferencedBundleNames.Add(root.BundleName);
-                    }
-                }
-            }
-
-            public void CollectNodesAndCreateShared(Context context)
-            {
                 var childDeps = AssetDatabase.GetDependencies(Path, false);
                 foreach (var child in childDeps)
                 {
@@ -150,7 +134,7 @@ namespace BundleSystem
                             context.RootNodes.Add(child, newRoot);
                             context.ResultSharedNodes.Add(newRoot);
                             //is it okay to do here?
-                            newRoot.CollectNodesAndCreateShared(context);
+                            newRoot.CollectNodes(context);
                         }
                         continue;
                     }
@@ -159,7 +143,7 @@ namespace BundleSystem
                     var childNode = new Node(child, Root);
                     context.IndirectNodes.Add(child, childNode);
                     Children.Add(child, childNode);
-                    childNode.CollectNodesAndCreateShared(context);
+                    childNode.CollectNodes(context);
                 }
             }
         }

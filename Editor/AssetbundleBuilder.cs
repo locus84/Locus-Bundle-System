@@ -22,7 +22,7 @@ namespace BundleSystem
     public static class AssetbundleBuilder
     {
         const string LogFileName = "BundleBuildLog.txt";
-        const string LogDuplicateFileName = "BundleDuplicateLog.txt";
+        const string LogDependencyFileName = "BundleDependencyLog.txt";
 
         class CustomBuildParameters : BundleBuildParameters
         {
@@ -63,15 +63,21 @@ namespace BundleSystem
         public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
         {
             var bundleList = new List<AssetBundleBuild>();
+
             foreach (var setting in settings.BundleSettings)
             {
+                //find folder
                 var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
                 var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
                 if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
+
+                //collect assets
                 var assetPathes = new List<string>();
                 var loadPathes = new List<string>();
                 Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
                 if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
+
+                //make assetbundlebuild
                 var newBundle = new AssetBundleBuild();
                 newBundle.assetBundleName = setting.BundleName;
                 newBundle.assetNames = assetPathes.ToArray();
@@ -79,14 +85,25 @@ namespace BundleSystem
                 bundleList.Add(newBundle);
             }
 
-            //generate sharedBundle if needed, and pre generate dependency
-            var deps = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles);
-
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
             var outputPath = Path.Combine(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, deps, buildType);
+
+
+            //generate sharedBundle if needed, and pre generate dependency
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+
+            if (settings.AutoCreateSharedBundles)
+            {
+                bundleList.AddRange(treeResult.SharedBundles);
+            }
+            else
+            {
+                WriteDependencyReport(outputPath, treeResult);
+            }
+
+            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -104,7 +121,6 @@ namespace BundleSystem
             if (returnCode == ReturnCode.Success)
             {
                 //only remote bundle build generates link.xml
-
                 switch(buildType)
                 {
                     case BuildType.Local:
@@ -133,12 +149,16 @@ namespace BundleSystem
             var depsDic = customBuildParams.DependencyDic;
 
             List<string> includedBundles;
+
             if(customBuildParams.CurrentBuildType == BuildType.Local)
             {
-                var localBundles = customBuildParams.CurrentSettings.BundleSettings
+                //deps includes every local dependencies recursively
+                includedBundles = customBuildParams.CurrentSettings.BundleSettings
                     .Where(setting => setting.IncludedInPlayer)
-                    .Select(setting => setting.BundleName);
-                includedBundles = localBundles.Union(localBundles.SelectMany(name => depsDic[name])).Distinct().ToList();
+                    .Select(setting => setting.BundleName)
+                    .SelectMany(bundleName => Utility.CollectBundleDependencies(depsDic, bundleName, true))
+                    .Distinct()
+                    .ToList();
             }
             //if not local build, we include everything
             else
@@ -175,7 +195,7 @@ namespace BundleSystem
                 }
 
                 // if we do not want to build that bundle, remove the write operation from the list
-                if ((customBuildParams.CurrentBuildType == BuildType.Local && !includedBundles.Contains(bundleName)))
+                if (!includedBundles.Contains(bundleName))
                 {
                     writeData.WriteOperations.RemoveAt(i);
                 }
@@ -191,16 +211,15 @@ namespace BundleSystem
         {
             var manifest = new AssetbundleBuildManifest();
             manifest.BuildTarget = target.ToString();
+
+            //we use unity provided dependency result for final check
             var deps = bundleResults.BundleInfos.ToDictionary(kv => kv.Key, kv => kv.Value.Dependencies.ToList());
-            var depsCollectCache = new HashSet<string>();
 
             foreach (var result in bundleResults.BundleInfos)
             {
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
-                depsCollectCache.Clear();
-                Utility.CollectBundleDependencies(depsCollectCache, deps, result.Key);
-                bundleInfo.Dependencies = depsCollectCache.ToList();
+                bundleInfo.Dependencies = Utility.CollectBundleDependencies(deps, result.Key);
                 bundleInfo.Hash = result.Value.Hash;
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
                 manifest.BundleInfos.Add(bundleInfo);
@@ -216,6 +235,34 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
+        static void WriteDependencyReport(string path, AssetDependencyTree.ProcessResult treeResult)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
+            sb.AppendLine($"Possible shared bundles not created");
+            sb.AppendLine();
+
+            var sharedBundleDic = treeResult.SharedBundles.ToDictionary(ab => ab.assetBundleName, ab => ab.assetNames[0]);
+
+            //find flatten deps which contains non-shared bundles
+            var definedBundles = treeResult.BundleDependencies.Keys.Where(name => !sharedBundleDic.ContainsKey(name)).ToList();
+            var depsOnlyDefined = definedBundles.ToDictionary(name => name, name => Utility.CollectBundleDependencies(treeResult.BundleDependencies, name));
+
+            foreach(var kv in sharedBundleDic)
+            {
+                var bundleName = kv.Key;
+                var assetPath = kv.Value;
+                var referencedDefinedBundles = depsOnlyDefined.Where(pair => pair.Value.Contains(bundleName)).Select(pair => pair.Key).ToList();
+
+                sb.AppendLine($"AssetPath - { assetPath } is referenced by");
+                foreach(var refBundleName in referencedDefinedBundles) sb.AppendLine($"    - {refBundleName}");
+                sb.AppendLine();
+            }
+
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            File.WriteAllText(Path.Combine(path, LogDependencyFileName), sb.ToString());
+        }
+
 
         /// <summary>
         /// write logs into target path.
@@ -225,8 +272,8 @@ namespace BundleSystem
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
             sb.AppendLine();
-            
-            for(int i = 0; i < bundleResults.BundleInfos.Count; i++)
+
+            for (int i = 0; i < bundleResults.BundleInfos.Count; i++)
             {
                 var bundleInfo = bundleResults.BundleInfos.ElementAt(i);
                 var writeResult = bundleResults.WriteResults.ElementAt(i);
@@ -260,46 +307,5 @@ namespace BundleSystem
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             File.WriteAllText(Path.Combine(path, LogFileName), sb.ToString());
         }
-
-        /// <summary>
-        /// find out duplicate files in bundle
-        /// </summary>
-        static void WriteDuplicateLogFile(string dirPath, Dictionary<string, HashSet<GUID>> bundleHashDic)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
-            sb.AppendLine($"Assets included multiple times");
-            sb.AppendLine($"[Asset Path] - [Bundle Names included]");
-            sb.AppendLine();
-
-            var duplicateAssetsDic = new Dictionary<GUID, List<string>>();
-
-            foreach (var kv in bundleHashDic)
-            {
-                foreach(var guid in kv.Value)
-                {
-                    List<string> referencedBundles;
-                    if (!duplicateAssetsDic.TryGetValue(guid, out referencedBundles))
-                    {
-                        referencedBundles = new List<string>();
-                        duplicateAssetsDic.Add(guid, referencedBundles);
-                    }
-                    referencedBundles.Add(kv.Key);
-                }
-            }
-
-            //sort by duplicated count
-            var sortedKvList = duplicateAssetsDic.Where(kv => kv.Value.Count > 1).OrderByDescending(kv => kv.Value.Count);
-
-            foreach (var kv in sortedKvList)
-            {
-                var bundles = string.Join(". ", kv.Value);
-                sb.AppendLine($"{AssetDatabase.GUIDToAssetPath(kv.Key.ToString())} - [{bundles}]");
-            }
-
-            if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
-            File.WriteAllText(Path.Combine(dirPath, LogDuplicateFileName), sb.ToString());
-        }
-
     }
 }
