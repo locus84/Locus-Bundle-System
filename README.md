@@ -84,10 +84,10 @@ You can find active AssetbundleBuildSetting in menu.
 This system support automated assetbundle optimization.\
 Which means, it automatically findout duplicated top-most assets in your bundle dependency tree,\
 and make them into seperated shared bundles.
-By using this, you can easily manage your dependencies, and there will be **no** duplicated assets included in your assetbundles.
+By using this, you can easily manage your dependencies, and there will be **no** duplicated assets included in your assetbundles.\
 ![image](https://user-images.githubusercontent.com/6591432/86381697-7cb5ed00-bcc8-11ea-8f84-75e248828e42.png)\
 If you find out execpted shared bundles are created, define a bundle warp them up, it'll automatically disappeared in next build.\
-![image](https://user-images.githubusercontent.com/6591432/86383676-2b5a2d80-bcc9-11ea-8048-3e136b5db0c2.png)
+![image](https://user-images.githubusercontent.com/6591432/86384732-1c27af80-bcca-11ea-84f9-7791a7598969.png)
 
 
 ## API Examples
