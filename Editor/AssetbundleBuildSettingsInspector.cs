@@ -89,7 +89,22 @@ namespace BundleSystem
             var settings = target as AssetbundleBuildSettings;
 
             list.DoLayoutList();
+            bool allowBuild = true;
+            if (!settings.IsValid())
+            {
+                GUILayout.Label("Duplicate or Empty BundleName detected");
+                allowBuild = false;
+            }
+
+            GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_AutoCreateSharedBundles);
+            if (allowBuild && GUILayout.Button("Get Expected Sharedbundle List"))
+            {
+                AssetbundleBuilder.WriteExpectedSharedBundles(settings);
+                GUIUtility.ExitGUI();
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_RemoteOutputPath);
             if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Path.Combine(settings.RemoteOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
@@ -121,16 +136,10 @@ namespace BundleSystem
                 EditorGUILayout.PropertyField(m_FtpUser);
                 m_FtpPass.stringValue = EditorGUILayout.PasswordField("Ftp Password", m_FtpPass.stringValue);
             }
-            bool allowBuild = true;
-
-            if (!settings.IsValid())
-            {
-                GUILayout.Label("Duplicate or Empty BundleName detected");
-                allowBuild = false;
-            }
 
             GUILayout.Label($"Local Output folder : { settings.LocalOutputPath }");
             GUILayout.Label($"Remote Output folder : { settings.RemoteOutputPath }");
+
             serializedObject.ApplyModifiedProperties();
 
             if(AssetbundleBuildSettings.EditorInstance == settings)

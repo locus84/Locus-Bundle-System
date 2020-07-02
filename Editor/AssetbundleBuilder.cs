@@ -22,7 +22,7 @@ namespace BundleSystem
     public static class AssetbundleBuilder
     {
         const string LogFileName = "BundleBuildLog.txt";
-        const string LogDependencyFileName = "BundleDependencyLog.txt";
+        const string LogExpectedSharedBundleFileName = "ExpectedSharedBundles.txt";
 
         class CustomBuildParameters : BundleBuildParameters
         {
@@ -60,7 +60,18 @@ namespace BundleSystem
             BuildAssetBundles(editorInstance, buildType);
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
+        public static void WriteExpectedSharedBundles(AssetbundleBuildSettings settings)
+        {
+            var bundleList = GetAssetBundlesList(settings);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
+            if(!Application.isBatchMode)
+            {
+                EditorUtility.DisplayDialog("Succeeded!", $"Check {LogExpectedSharedBundleFileName} in your project root directory!", "Confirm");
+            }
+        }
+
+        public static List<AssetBundleBuild> GetAssetBundlesList(AssetbundleBuildSettings settings)
         {
             var bundleList = new List<AssetBundleBuild>();
 
@@ -85,6 +96,13 @@ namespace BundleSystem
                 bundleList.Add(newBundle);
             }
 
+            return bundleList;
+        }
+
+        public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
+        {
+            var bundleList = GetAssetBundlesList(settings);
+
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
@@ -97,10 +115,6 @@ namespace BundleSystem
             if (settings.AutoCreateSharedBundles)
             {
                 bundleList.AddRange(treeResult.SharedBundles);
-            }
-            else
-            {
-                WriteDependencyReport(outputPath, treeResult);
             }
 
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
@@ -126,13 +140,13 @@ namespace BundleSystem
                     case BuildType.Local:
                         WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
                         WriteLogFile(outputPath, results);
-                        EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
+                        if(!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
                         break;
                     case BuildType.Remote:
                         WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
                         WriteLogFile(outputPath, results);
                         var linkPath = TypeLinkerGenerator.Generate(settings, results);
-                        EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
+                        if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
                         break;
                 }
             }
@@ -235,11 +249,11 @@ namespace BundleSystem
             File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
-        static void WriteDependencyReport(string path, AssetDependencyTree.ProcessResult treeResult)
+        static void WriteSharedBundleLog(string path, AssetDependencyTree.ProcessResult treeResult)
         {
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
-            sb.AppendLine($"Possible shared bundles not created");
+            sb.AppendLine($"Possible shared bundles will be created..");
             sb.AppendLine();
 
             var sharedBundleDic = treeResult.SharedBundles.ToDictionary(ab => ab.assetBundleName, ab => ab.assetNames[0]);
@@ -254,13 +268,13 @@ namespace BundleSystem
                 var assetPath = kv.Value;
                 var referencedDefinedBundles = depsOnlyDefined.Where(pair => pair.Value.Contains(bundleName)).Select(pair => pair.Key).ToList();
 
-                sb.AppendLine($"AssetPath - { assetPath } is referenced by");
+                sb.AppendLine($"Shared_{AssetDatabase.AssetPathToGUID(assetPath)} - { assetPath } is referenced by");
                 foreach(var refBundleName in referencedDefinedBundles) sb.AppendLine($"    - {refBundleName}");
                 sb.AppendLine();
             }
 
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, LogDependencyFileName), sb.ToString());
+            File.WriteAllText(Path.Combine(path, LogExpectedSharedBundleFileName), sb.ToString());
         }
 
 
