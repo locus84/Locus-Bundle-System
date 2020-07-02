@@ -79,15 +79,15 @@ Multiple AssetbundleSettings are supported.\
 You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref).\
 You can find active AssetbundleBuildSetting in menu.
 
-**Optimize your bundles**
+**Auto Optimize Your Bundles**
 
-Whenever you build your local/remote bundles,\
-You'll notice BundleDuplicateLog.txt file is generated in your project folder.\
-Which is list of duplicated assets in your bundles.\
-![image](https://user-images.githubusercontent.com/6591432/82748527-80a74300-9ddd-11ea-9ae4-403e6c542894.png)\
-Please refer it and make some optimizations.\
-You can also run 'Dry build' to get this file without additional time.\
-![drybuild](https://user-images.githubusercontent.com/6591432/82748497-4e95e100-9ddd-11ea-8739-ae5bca3c4879.png)
+This system support automated assetbundle optimization.\
+Which means, it automatically findout duplicated top-most assets in your bundle dependency tree,\
+and make them into seperated shared bundles.
+By using this, you can easily manage your dependencies, and there will be **no** duplicated assets included in your assetbundles.
+![image](https://user-images.githubusercontent.com/6591432/86381697-7cb5ed00-bcc8-11ea-8f84-75e248828e42.png)\
+If you find out execpted shared bundles are created, define a bundle warp them up, it'll automatically disappeared in next build.\
+![image](https://user-images.githubusercontent.com/6591432/86383676-2b5a2d80-bcc9-11ea-8048-3e136b5db0c2.png)
 
 
 ## API Examples
