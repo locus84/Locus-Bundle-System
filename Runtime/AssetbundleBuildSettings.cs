@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -48,35 +46,6 @@ namespace BundleSystem
         }
 
         /// <summary>
-        /// Search files in directory
-        /// </summary>
-        public static void GetFilesInDirectory(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, DirectoryInfo dir, bool includeSubdir)
-        {
-            var files = dir.GetFiles();
-            for (int i = 0; i < files.Length; i++)
-            {
-                var currentFile = files[i];
-                var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6);
-                var mainType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(unityPath);
-                if (mainType == null) continue;
-                if (mainType == typeof(UnityEditor.MonoScript)) continue;
-                if (mainType.IsSubclassOf(typeof(Object)))
-                {
-                    resultAssetPath.Add(unityPath);
-                    resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
-                }
-            }
-
-            if (includeSubdir)
-            {
-                foreach (var subDir in dir.GetDirectories())
-                {
-                    GetFilesInDirectory(Path.Combine(dirPrefix, dir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
-                }
-            }
-        }
-
-        /// <summary>
         /// check setting is valid
         /// </summary>
         public bool IsValid()
@@ -91,6 +60,9 @@ namespace BundleSystem
         public string RemoteOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_RemoteOutputFolder;
 
         public List<BundleSetting> BundleSettings = new List<BundleSetting>();
+
+        [Tooltip("Auto create shared bundles to remove duplicated assets")]
+        public bool AutoCreateSharedBundles = true;
 
         /// <summary>
         /// output folder inside project

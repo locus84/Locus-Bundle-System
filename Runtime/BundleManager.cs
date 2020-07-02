@@ -36,6 +36,7 @@ namespace BundleSystem
                 Hash = info.Hash;
                 AssetNames = new HashSet<string>(bundle.GetAllAssetNames());
                 Dependencies = info.Dependencies;
+                Dependencies.Add(Name);
             }
         }
 
