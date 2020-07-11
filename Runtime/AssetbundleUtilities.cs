@@ -81,6 +81,33 @@ namespace BundleSystem
             object[] parameters = new object[] { $"b:{bundleName}" };
             setSearchType.Invoke(projectBrowser, parameters);
         }
+
+        public static string GetAssetBundleName(string assetPath)
+        {
+            var importer = AssetImporter.GetAtPath(assetPath);
+            if (importer == null) return string.Empty;
+            return importer.assetBundleName;
+        }
+
+        public static string GetLabelLoadName(string assetPath)
+        {
+            var bundleName = GetAssetBundleName(assetPath);
+            if (!string.IsNullOrEmpty(bundleName)) return Path.GetFileNameWithoutExtension(assetPath);
+
+            var partialPath = assetPath;
+            while (
+                !string.IsNullOrEmpty(partialPath) &&
+                partialPath != "Assets" &&
+                string.IsNullOrEmpty(bundleName))
+            {
+                partialPath = partialPath.Substring(0, partialPath.LastIndexOf('/'));
+                bundleName = GetAssetBundleName(partialPath);
+            }
+            var dirPath = Path.GetDirectoryName(assetPath);
+            var dir = dirPath.Remove(0, partialPath.Length + 1);
+            var fileName = Path.GetFileNameWithoutExtension(assetPath);
+            return $"{dir}/{fileName}";
+        }
     }
 #endif
 }

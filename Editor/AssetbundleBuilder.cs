@@ -75,25 +75,32 @@ namespace BundleSystem
         {
             var bundleList = new List<AssetBundleBuild>();
 
-            foreach (var setting in settings.BundleSettings)
+            if(settings.UseAssetBundleLabel)
             {
-                //find folder
-                var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
-                if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
+                AssetDatabase.GetAllAssetBundleNames();
+            }
+            else
+            {
+                foreach (var setting in settings.BundleSettings)
+                {
+                    //find folder
+                    var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
+                    var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
+                    if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
 
-                //collect assets
-                var assetPathes = new List<string>();
-                var loadPathes = new List<string>();
-                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
-                if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
+                    //collect assets
+                    var assetPathes = new List<string>();
+                    var loadPathes = new List<string>();
+                    Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
+                    if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
 
-                //make assetbundlebuild
-                var newBundle = new AssetBundleBuild();
-                newBundle.assetBundleName = setting.BundleName;
-                newBundle.assetNames = assetPathes.ToArray();
-                newBundle.addressableNames = loadPathes.ToArray();
-                bundleList.Add(newBundle);
+                    //make assetbundlebuild
+                    var newBundle = new AssetBundleBuild();
+                    newBundle.assetBundleName = setting.BundleName;
+                    newBundle.assetNames = assetPathes.ToArray();
+                    newBundle.addressableNames = loadPathes.ToArray();
+                    bundleList.Add(newBundle);
+                }
             }
 
             return bundleList;

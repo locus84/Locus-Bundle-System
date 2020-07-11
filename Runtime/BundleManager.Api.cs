@@ -26,7 +26,8 @@ namespace BundleSystem
 
             UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
 
-            if(UseAssetDatabase)
+            //when using assetbundle tag, we don't need to pre-collect assets
+            if(UseAssetDatabase && !s_EditorBuildSettings.UseAssetBundleLabel)
             {
                 var assetPath = new List<string>();
                 var loadPath = new List<string>();
@@ -54,6 +55,7 @@ namespace BundleSystem
 
         static List<string> GetAssetPathsFromAssetBundleAndAssetName(string bundleName, string assetName)
         {
+            if (s_EditorBuildSettings.UseAssetBundleLabel) return new List<string>(UnityEditor.AssetDatabase.GetAssetPathsFromAssetBundleAndAssetName(bundleName, assetName));
             if (!s_AssetListForEditor.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringList;
             if (!innerDic.TryGetValue(assetName, out var pathList)) return s_EmptyStringList;
             return pathList;
@@ -61,6 +63,7 @@ namespace BundleSystem
 
         static List<string> GetAssetPathsFromAssetBundle(string bundleName)
         {
+            if (s_EditorBuildSettings.UseAssetBundleLabel) return new List<string>(UnityEditor.AssetDatabase.GetAssetPathsFromAssetBundle(bundleName));
             if (!s_AssetListForEditor.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringList;
             return innerDic.Values.SelectMany(list => list).ToList();
         }

@@ -50,15 +50,19 @@ namespace BundleSystem
         /// </summary>
         public bool IsValid()
         {
+            if (UseAssetBundleLabel) return true;
             return !BundleSettings.GroupBy(setting => setting.BundleName).Any(group => group.Count() > 1 ||
                 string.IsNullOrEmpty(group.Key));
         }
 #endif
         public const string ManifestFileName = "Manifest.json";
         public static string LocalBundleRuntimePath => Application.streamingAssetsPath + "/localbundles/";
+
+        public bool UseAssetBundleLabel = false;
         public string LocalOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_LocalOutputFolder;
         public string RemoteOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_RemoteOutputFolder;
 
+        public List<LabelSetting> LabelSettings = new List<LabelSetting>();
         public List<BundleSetting> BundleSettings = new List<BundleSetting>();
 
         [Tooltip("Auto create shared bundles to remove duplicated assets")]
@@ -103,7 +107,7 @@ namespace BundleSystem
     }
 
     [System.Serializable]
-    public class BundleSetting
+    public class BundleSetting : IBundleInfoProvider
     {
         [Tooltip("AssetBundle Name")]
         public string BundleName;
@@ -114,6 +118,32 @@ namespace BundleSystem
         public bool IncludeSubfolder = false;
         [Tooltip("Works only for remote bundle, true for LMZA, false for LZ4")]
         public bool CompressBundle = true;
+
+        public bool IsCompressed => CompressBundle;
+        public bool IsLocalBundle => IncludedInPlayer;
+        public string GetBundleName() => BundleName;
+    }
+
+    [System.Serializable]
+    public class LabelSetting : IBundleInfoProvider
+    {
+        [Tooltip("AssetBundle Name")]
+        public string BundleName;
+        [Tooltip("Should this bundle included in player?")]
+        public bool IncludedInPlayer = false;
+        [Tooltip("Works only for remote bundle, true for LMZA, false for LZ4")]
+        public bool CompressBundle = true;
+
+        public bool IsCompressed => CompressBundle;
+        public bool IsLocalBundle => IncludedInPlayer;
+        public string GetBundleName() => BundleName;
+    }
+
+    public interface IBundleInfoProvider
+    {
+        string GetBundleName();
+        bool IsCompressed { get; }
+        bool IsLocalBundle { get; }
     }
 }
 
