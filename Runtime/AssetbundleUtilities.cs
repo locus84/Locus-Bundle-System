@@ -68,6 +68,19 @@ namespace BundleSystem
                     CollectBundleDependenciesRecursive(result, deps, dependency, rootName);
             }
         }
+
+        public static void SetBundleSearchFilter(string bundleName)
+        {
+            //open project window
+            EditorApplication.ExecuteMenuItem("Window/General/Project");
+            var projectBrowser = ((EditorWindow[])Resources.FindObjectsOfTypeAll(typeof(EditorWindow)))
+                .Where(w => w.GetType().ToString() == "UnityEditor.ProjectBrowser").First();
+
+            System.Reflection.MethodInfo setSearchType = projectBrowser.GetType().GetMethod("SetSearch", new[] { typeof(string) });
+
+            object[] parameters = new object[] { $"b:{bundleName}" };
+            setSearchType.Invoke(projectBrowser, parameters);
+        }
     }
 #endif
 }
