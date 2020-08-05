@@ -64,9 +64,6 @@ namespace BundleSystem
         [Tooltip("Auto create shared bundles to remove duplicated assets")]
         public bool AutoCreateSharedBundles = true;
 
-        [Tooltip("Auto create shared bundles also include package assets")]
-        public bool AlsoIncludePackages = false;
-
         /// <summary>
         /// output folder inside project
         /// </summary>

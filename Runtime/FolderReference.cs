@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using UnityEngine;
-using UnityEditor.PackageManager;
 
 namespace BundleSystem
 {
@@ -13,10 +12,7 @@ namespace BundleSystem
 #if UNITY_EDITOR
 namespace BundleSystem
 {
-    using System.Threading;
     using UnityEditor;
-    using UnityEngine.UIElements;
-
     [CustomPropertyDrawer(typeof(FolderReference))]
     public class FolderReferencePropertyDrawer : PropertyDrawer
     {
@@ -68,27 +64,12 @@ namespace BundleSystem
 
             if (GUI.Button(objectFieldRect, "", GUI.skin.GetStyle("IN ObjectField")))
             {
-                string path = EditorUtility.OpenFolderPanel("Select a folder", string.Empty, "");
-                var req = Client.List();
-                while (!req.IsCompleted) Thread.Sleep(100);
-                foreach(var haha in req.Result)
-                {
-                    Debug.Log(haha.resolvedPath);
-                }
-                Debug.Log(path);
-                var asset = AssetDatabase.GetMainAssetTypeAtPath("Packages/com.unity.collab-proxy/Editor/Collab");
-                Debug.Log(asset);
-                Debug.Log(Application.dataPath);
-                Debug.Log(Path.GetFullPath("Packages/"));
-                Debug.Log(Directory.GetCurrentDirectory());
+                string path = EditorUtility.OpenFolderPanel("Select a folder", "Assets", "");
                 if (path.Contains(Application.dataPath))
                 {
                     path = "Assets" + path.Substring(Application.dataPath.Length);
                     obj = AssetDatabase.LoadAssetAtPath(path, typeof(DefaultAsset));
                     guid.stringValue = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj));
-                }
-                else if(path.Contains(Application.dataPath.Remove(Application.dataPath.Length - 6) + "/Library/PackagageCache"))
-                {
                 }
                 else if(!string.IsNullOrEmpty(path))
                 {
