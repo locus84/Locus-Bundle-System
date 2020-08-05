@@ -16,7 +16,7 @@ namespace BundleSystem
             public List<AssetBundleBuild> SharedBundles;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles)
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool includePackages)
         {
             var context = new Context();
             var rootNodesToProcess = new List<RootNode>();

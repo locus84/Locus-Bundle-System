@@ -63,7 +63,7 @@ namespace BundleSystem
         public static void WriteExpectedSharedBundles(AssetbundleBuildSettings settings)
         {
             var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AlsoIncludePackages);
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
             {
@@ -110,7 +110,7 @@ namespace BundleSystem
 
 
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AlsoIncludePackages);
 
             if (settings.AutoCreateSharedBundles)
             {

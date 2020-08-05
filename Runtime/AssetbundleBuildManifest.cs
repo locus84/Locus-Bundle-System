@@ -83,5 +83,35 @@ namespace BundleSystem
                 return false;
             }
         }
+
+        /// <summary>
+        /// Collect subset of bundleinfoes that interested, including dependencies
+        /// </summary>
+        public List<BundleInfo> CollectSubsetBundleInfoes(IEnumerable<string> subsetNames)
+        {
+            var bundleInfoDic = BundleInfos.ToDictionary(info => info.BundleName);
+            var resultDic = new Dictionary<string, BundleInfo>();
+            foreach(var name in subsetNames)
+            {
+                if(!bundleInfoDic.TryGetValue(name, out var bundle))
+                {
+                    if (BundleManager.LogMessages) Debug.LogWarning($"Name you provided ({name}) could not be found");
+                    continue;
+                }
+
+                if (!resultDic.ContainsKey(bundle.BundleName))
+                {
+                    resultDic.Add(bundle.BundleName, bundle);
+                }
+                
+                for(int i = 0; i < bundle.Dependencies.Count; i++)
+                {
+                    var depName = bundle.Dependencies[i];
+                    if (!resultDic.ContainsKey(depName)) resultDic.Add(depName, bundleInfoDic[depName]);
+                }
+            }
+
+            return bundleInfoDic.Values.ToList();
+        }
     }
 }

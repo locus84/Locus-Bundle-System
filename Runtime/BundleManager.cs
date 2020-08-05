@@ -189,6 +189,15 @@ namespace BundleSystem
             result.Done(BundleErrorCode.Success);
         }
 
+        /// <summary>
+        /// get last cached manifest, to support offline play
+        /// </summary>
+        /// <returns></returns>
+        public static bool TryGetCachedManifest(out AssetbundleBuildManifest manifest)
+        {
+            return AssetbundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out manifest);
+        }
+
         public static BundleAsyncOperation<AssetbundleBuildManifest> GetManifest()
         {
             var result = new BundleAsyncOperation<AssetbundleBuildManifest>();
@@ -234,8 +243,13 @@ namespace BundleSystem
             result.Done(BundleErrorCode.Success);
         }
 
-        //Get download size of 
-        public static long GetDownloadSize(AssetbundleBuildManifest manifest)
+        /// <summary>
+        /// Get download size of entire bundles(except cached)
+        /// </summary>
+        /// <param name="manifest">manifest you get from GetManifest() function</param>
+        /// <param name="subsetNames">names that you interested among full bundle list(optional)</param>
+        /// <returns></returns>
+        public static long GetDownloadSize(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
         {
             if (!Initialized)
             {
@@ -244,30 +258,33 @@ namespace BundleSystem
 
             long totalSize = 0;
 
-            for (int i = 0; i < manifest.BundleInfos.Count; i++)
+            var bundleInfoList = subsetNames == null ? manifest.BundleInfos : manifest.CollectSubsetBundleInfoes(subsetNames);
+
+            for (int i = 0; i < bundleInfoList.Count; i++)
             {
-                var bundleInfo = manifest.BundleInfos[i];
-                var localBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
-                if (!localBundle && !Caching.IsVersionCached(bundleInfo.AsCached))
+                var bundleInfo = bundleInfoList[i];
+                var uselocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
+                if (!uselocalBundle && !Caching.IsVersionCached(bundleInfo.AsCached))
                     totalSize += bundleInfo.Size;
             }
 
             return totalSize;
         }
 
+
         /// <summary>
-        /// acutally download assetbundles load from cache if cached
+        /// acutally download assetbundles load from cache if cached 
         /// </summary>
-        /// <param name="hardUnload">hard unload reloaded bundle</param>
-        /// <returns>returns bundle has been reloaded</returns>
-        public static BundleAsyncOperation<bool> DownloadAssetBundles(AssetbundleBuildManifest manifest, bool hardUnload = false)
+        /// <param name="manifest">manifest you get from GetManifest() function</param>
+        /// <param name="subsetNames">names that you interested among full bundle list(optional)</param>
+        public static BundleAsyncOperation<bool> DownloadAssetBundles(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
         {
             var result = new BundleAsyncOperation<bool>();
-            s_Helper.StartCoroutine(CoDownloadAssetBundles(manifest, hardUnload, result));
+            s_Helper.StartCoroutine(CoDownloadAssetBundles(manifest, subsetNames, result));
             return result;
         }
 
-        static IEnumerator CoDownloadAssetBundles(AssetbundleBuildManifest remoteManifest, bool hardUnload, BundleAsyncOperation<bool> result)
+        static IEnumerator CoDownloadAssetBundles(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames, BundleAsyncOperation<bool> result)
         {
             if (!Initialized)
             {
@@ -282,21 +299,26 @@ namespace BundleSystem
                 yield break;
             }
 
-            var startTime = Time.realtimeSinceStartup;
+            var bundlesToUnload = new HashSet<string>(s_AssetBundles.Keys);
+            var downloadBundleList = subsetNames == null ? manifest.BundleInfos : manifest.CollectSubsetBundleInfoes(subsetNames);
+            var bundleReplaced = false; //bundle has been replaced
 
-            result.SetIndexLength(remoteManifest.BundleInfos.Count);
-            bool bundleReplaced = false; //bundle has been replaced
-
-            for (int i = 0; i < remoteManifest.BundleInfos.Count; i++)
+            result.SetIndexLength(downloadBundleList.Count);
+            
+            for (int i = 0; i < downloadBundleList.Count; i++)
             {
                 result.SetCurrentIndex(i);
-                var bundleInfo = remoteManifest.BundleInfos[i];
-                var localBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
+                var bundleInfo = downloadBundleList[i];
+
+                //remove from the set so we can track bundles that should be cleared
+                bundlesToUnload.Remove(bundleInfo.BundleName);
+
+                var islocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
                 var isCached = Caching.IsVersionCached(bundleInfo.AsCached);
                 result.SetCachedBundle(isCached);
 
-                var loadURL = localBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName);
-                if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {localBundle}, isCached {isCached}");
+                var loadURL = islocalBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName);
+                if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {islocalBundle}, isCached {isCached}");
                 LoadedBundle previousBundle;
 
                 if (s_AssetBundles.TryGetValue(bundleInfo.BundleName, out previousBundle) && previousBundle.Hash == bundleInfo.Hash)
@@ -305,7 +327,7 @@ namespace BundleSystem
                 }
                 else
                 {
-                    var bundleReq = localBundle ? UnityWebRequestAssetBundle.GetAssetBundle(loadURL) : UnityWebRequestAssetBundle.GetAssetBundle(loadURL, bundleInfo.AsCached);
+                    var bundleReq = islocalBundle ? UnityWebRequestAssetBundle.GetAssetBundle(loadURL) : UnityWebRequestAssetBundle.GetAssetBundle(loadURL, bundleInfo.AsCached);
                     var operation = bundleReq.SendWebRequest();
                     while (!bundleReq.isDone)
                     {
@@ -322,29 +344,44 @@ namespace BundleSystem
                     if (s_AssetBundles.TryGetValue(bundleInfo.BundleName, out previousBundle))
                     {
                         bundleReplaced = true;
-                        previousBundle.Bundle.Unload(hardUnload);
+                        previousBundle.Bundle.Unload(false);
                         if (previousBundle.RequestForReload != null) 
                             previousBundle.RequestForReload.Dispose(); //dispose reload bundle
                         s_AssetBundles.Remove(bundleInfo.BundleName);
                     }
 
-                    var loadedBundle = new LoadedBundle(bundleInfo, loadURL, DownloadHandlerAssetBundle.GetContent(bundleReq), localBundle);
+                    var loadedBundle = new LoadedBundle(bundleInfo, loadURL, DownloadHandlerAssetBundle.GetContent(bundleReq), islocalBundle);
                     s_AssetBundles.Add(bundleInfo.BundleName, loadedBundle);
                     CollectSceneNames(loadedBundle);
                     if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName} Complete");
                     bundleReq.Dispose();
                 }
-
-                Caching.MarkAsUsed(bundleInfo.AsCached);
             }
 
-            var timeTook = Time.realtimeSinceStartup - startTime;
+            //let's drop unknown bundles loaded
+            foreach(var name in bundlesToUnload)
+            {
+                var bundleInfo = s_AssetBundles[name];
+                bundleInfo.Bundle.Unload(false);
+                if (bundleInfo.RequestForReload != null)
+                    bundleInfo.RequestForReload.Dispose(); //dispose reload bundle
+                s_AssetBundles.Remove(bundleInfo.Name);
+            }
+
+            //bump entire bundles' usage timestamp
+            //we use manifest directly to find out entire list
+            for (int i = 0; i < manifest.BundleInfos.Count; i++)
+            {
+                var cachedInfo = manifest.BundleInfos[i].AsCached;
+                if (Caching.IsVersionCached(cachedInfo)) Caching.MarkAsUsed(cachedInfo);
+            }
+
             if (LogMessages) Debug.Log($"CacheUsed Before Cleanup : {Caching.defaultCache.spaceOccupied} bytes");
-            Caching.ClearCache((int)timeTook + 600);
+            Caching.ClearCache(600); //as we bumped entire list right before clear, let it be just 600
             if (LogMessages) Debug.Log($"CacheUsed After CleanUp : {Caching.defaultCache.spaceOccupied} bytes");
 
-            PlayerPrefs.SetString("CachedManifest", JsonUtility.ToJson(remoteManifest));
-            GlobalBundleHash = remoteManifest.GlobalHash.ToString();
+            PlayerPrefs.SetString("CachedManifest", JsonUtility.ToJson(manifest));
+            GlobalBundleHash = manifest.GlobalHash.ToString();
             result.Result = bundleReplaced;
             result.Done(BundleErrorCode.Success);
         }
