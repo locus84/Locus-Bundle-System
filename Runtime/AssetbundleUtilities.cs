@@ -41,7 +41,7 @@ namespace BundleSystem
             {
                 foreach (var subDir in dir.GetDirectories())
                 {
-                    GetFilesInDirectory(Path.Combine(dirPrefix, dir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
+                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
                 }
             }
         }
