@@ -142,6 +142,8 @@ namespace BundleSystem
 
             serializedObject.ApplyModifiedProperties();
 
+            EditorGUI.BeginDisabledGroup(Application.isPlaying);
+
             if(AssetbundleBuildSettings.EditorInstance == settings)
             {
                 EditorGUILayout.BeginHorizontal();
@@ -174,6 +176,7 @@ namespace BundleSystem
                 }
             }
 
+            EditorGUI.EndDisabledGroup();
         }
     }
 

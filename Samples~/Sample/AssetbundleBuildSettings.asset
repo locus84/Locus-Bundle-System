@@ -31,10 +31,11 @@ MonoBehaviour:
       guid: 3620c8e1f77dbac43a4a01c096ecf65f
     IncludeSubfolder: 0
     CompressBundle: 1
+  AutoCreateSharedBundles: 1
   m_RemoteOutputFolder: RemoteBundles
   m_LocalOutputFolder: LocalBundles
   RemoteURL: http://localhost/
-  EmulateInEditor: 1
+  EmulateInEditor: 0
   EmulateWithoutRemoteURL: 1
   CleanCacheInEditor: 1
   ForceRebuild: 1

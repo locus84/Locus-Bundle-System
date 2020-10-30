@@ -40,7 +40,7 @@ namespace BundleSystem
             set
             {
                 var assetPath = UnityEditor.AssetDatabase.GetAssetPath(value);
-                UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
+                UnityEditor.EditorPrefs.SetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
                 s_EditorInstance = value;
             }
         }
