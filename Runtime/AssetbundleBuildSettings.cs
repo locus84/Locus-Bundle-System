@@ -9,6 +9,8 @@ namespace BundleSystem
     {
 #if UNITY_EDITOR
         static AssetbundleBuildSettings s_EditorInstance = null;
+        public static bool IsBuilding { get; private set; }
+        public static void SetBuilding(bool isBuilding) => IsBuilding = isBuilding;
 
         public static AssetbundleBuildSettings EditorInstance
         {
@@ -52,6 +54,27 @@ namespace BundleSystem
         {
             return !BundleSettings.GroupBy(setting => setting.BundleName).Any(group => group.Count() > 1 ||
                 string.IsNullOrEmpty(group.Key));
+        }
+
+        /// <summary>
+        /// Check if an asset is included in one of bundles in this setting
+        /// </summary>
+        public bool TryGetBundleNameAndAssetPath(string guid, ref string bundleName, ref string assetPath)
+        {
+            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            foreach(var setting in BundleSettings)
+            {
+                var bundleFolderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
+                if (path.StartsWith(bundleFolderPath))
+                {
+                    //setting does not include subfolder and asset is in subfolder
+                    assetPath = path.Remove(0, bundleFolderPath.Length + 1);
+                    if (!setting.IncludeSubfolder && assetPath.IndexOf('/') >= 0) break;
+                    bundleName = setting.BundleName;
+                    return true;
+                }
+            }
+            return false;
         }
 #endif
         public const string ManifestFileName = "Manifest.json";

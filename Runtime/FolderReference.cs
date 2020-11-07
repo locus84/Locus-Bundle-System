@@ -26,7 +26,7 @@ namespace BundleSystem
             Rect r = EditorGUI.PrefixLabel(position, label);
 
             Rect textFieldRect = r;
-            textFieldRect.width -= 19f;
+            textFieldRect.width -= 62f;
 
             GUIStyle textFieldStyle = new GUIStyle("TextField")
             {
@@ -58,9 +58,27 @@ namespace BundleSystem
                 }
             }
 
+            Rect pasteButtonRect = r;
+            pasteButtonRect.x = textFieldRect.xMax + 1f;
+            pasteButtonRect.width = 45f;
+
+            if (GUI.Button(pasteButtonRect, "Paste"))
+            {
+                var buffer = EditorGUIUtility.systemCopyBuffer;
+                if (buffer.StartsWith("Assets/") || buffer.StartsWith("Packages/"))
+                {
+                    obj = AssetDatabase.LoadAssetAtPath(buffer, typeof(DefaultAsset));
+                    guid.stringValue = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj));
+                }
+                else if (!string.IsNullOrEmpty(buffer))
+                {
+                    Debug.LogError("The path must be in the Assets or Packages folder");
+                }
+            }
+
             Rect objectFieldRect = r;
-            objectFieldRect.x = textFieldRect.xMax + 1f;
-            objectFieldRect.width = 19f;
+            objectFieldRect.x = pasteButtonRect.xMax + 1f;
+            objectFieldRect.width = 17f;
 
             if (GUI.Button(objectFieldRect, "", GUI.skin.GetStyle("IN ObjectField")))
             {

@@ -86,6 +86,8 @@ namespace BundleSystem
 
         public override void OnInspectorGUI()
         {
+            EditorGUI.BeginDisabledGroup(Application.isPlaying);
+
             var settings = target as AssetbundleBuildSettings;
 
             list.DoLayoutList();
@@ -141,8 +143,6 @@ namespace BundleSystem
             GUILayout.Label($"Remote Output folder : { settings.RemoteOutputPath }");
 
             serializedObject.ApplyModifiedProperties();
-
-            EditorGUI.BeginDisabledGroup(Application.isPlaying);
 
             if(AssetbundleBuildSettings.EditorInstance == settings)
             {

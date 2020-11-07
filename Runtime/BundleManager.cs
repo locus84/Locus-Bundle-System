@@ -45,7 +45,18 @@ namespace BundleSystem
         static Dictionary<string, Hash128> s_LocalBundles = new Dictionary<string, Hash128>();
         static Dictionary<string, LoadedBundle> s_SceneNames = new Dictionary<string, LoadedBundle>();
 
-        public static bool UseAssetDatabase { get; private set; } = false;
+        //In editor, to support tests, while game is not playing, always use asset database.
+        public static bool UseAssetDatabase
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return !Application.isPlaying || !AssetbundleBuildSettings.EditorInstance.EmulateInEditor;
+#else
+                return false;
+#endif
+            }
+        }
         public static bool Initialized { get; private set; } = false;
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }

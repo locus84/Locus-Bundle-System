@@ -49,7 +49,6 @@ namespace BundleSystem
         /// <summary>
         /// collect bundle deps to actually use in runtime
         /// </summary>
-
         public static List<string> CollectBundleDependencies<T>(Dictionary<string, T> deps, string name, bool includeSelf = false) where T : IEnumerable<string>
         {
             var depsHash = new HashSet<string>();

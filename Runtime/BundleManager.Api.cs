@@ -24,8 +24,6 @@ namespace BundleSystem
                 Caching.ClearCache();
             }
 
-            UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
-
             if(UseAssetDatabase)
             {
                 var assetPath = new List<string>();
@@ -34,8 +32,8 @@ namespace BundleSystem
                 {
                     assetPath.Clear();
                     loadPath.Clear();
-                    var folderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                    var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
+                    var folderPath = Path.GetFullPath(UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid));
+                    var dir = new DirectoryInfo(folderPath);
                     Utility.GetFilesInDirectory(string.Empty, assetPath, loadPath, dir, setting.IncludeSubfolder);
                     var assetList = new Dictionary<string, List<string>>();
                     for(int i = 0; i < assetPath.Count; i++)
@@ -132,6 +130,7 @@ namespace BundleSystem
             request.completed += op => AsyncAssetLoaded(request, foundBundle);
             return new BundleRequest<T>(request);
         }
+
 
         private static void AsyncAssetLoaded(AssetBundleRequest request, LoadedBundle loadedBundle)
         {
