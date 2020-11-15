@@ -59,7 +59,7 @@ namespace BundleSystem
         /// <summary>
         /// Check if an asset is included in one of bundles in this setting
         /// </summary>
-        public bool TryGetBundleNameAndAssetPath(string editorAssetPath, ref string bundleName, ref string assetPath)
+        public bool TryGetBundleNameAndAssetPath(string editorAssetPath, out string bundleName, out string assetPath)
         {
             foreach(var setting in BundleSettings)
             {
@@ -67,12 +67,16 @@ namespace BundleSystem
                 if (editorAssetPath.StartsWith(bundleFolderPath))
                 {
                     //setting does not include subfolder and asset is in subfolder
-                    assetPath = editorAssetPath.Remove(0, bundleFolderPath.Length + 1);
-                    if (!setting.IncludeSubfolder && assetPath.IndexOf('/') >= 0) break;
+                    var partialPath = editorAssetPath.Remove(0, bundleFolderPath.Length + 1); 
+                    if (!setting.IncludeSubfolder && partialPath.IndexOf('/') >= bundleFolderPath.Length + 1) break;
+                    assetPath = partialPath.Remove(partialPath.LastIndexOf('.'));
                     bundleName = setting.BundleName;
                     return true;
                 }
             }
+
+            bundleName = string.Empty;
+            assetPath = string.Empty;
             return false;
         }
 

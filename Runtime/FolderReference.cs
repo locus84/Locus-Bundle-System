@@ -9,6 +9,7 @@ namespace BundleSystem
         public string guid;
     }
 }
+
 #if UNITY_EDITOR
 namespace BundleSystem
 {
