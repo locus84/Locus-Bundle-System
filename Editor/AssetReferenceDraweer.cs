@@ -9,17 +9,27 @@ namespace BundleSystem
     [CustomPropertyDrawer(typeof(AssetReference))]
     public class AssetReferenceDrawer : PropertyDrawer
     {
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        {
+            return EditorGUIUtility.singleLineHeight * 1;
+        }
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            var guid = property.FindPropertyRelative("m_AssetGuid");
-            var obj = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(guid.stringValue));
+            var bundleName = property.FindPropertyRelative("BundleName");
+            var assetName = property.FindPropertyRelative("AssetName");
 
             Rect r = EditorGUI.PrefixLabel(position, label);
             Rect objectFieldRect = r;
+            objectFieldRect.width -= 17f;
+            var half = objectFieldRect.width * 0.5f;
+            objectFieldRect.width = half - 2;
+            bundleName.stringValue = EditorGUI.TextField(objectFieldRect, bundleName.stringValue);
+            objectFieldRect.x += half;
+            assetName.stringValue = EditorGUI.TextField(objectFieldRect, assetName.stringValue);
 
-            if(!AssetReference.ValidateReference(guid.stringValue))
+            if (!AssetbundleBuildSettings.EditorInstance.IsAssetIncluded(bundleName.stringValue, assetName.stringValue))
             {
-                objectFieldRect.width -= 17f;
                 Rect iconRect = r;
                 iconRect.x = objectFieldRect.xMax + 1f;
                 iconRect.width = 17f;
@@ -27,20 +37,6 @@ namespace BundleSystem
                 EditorGUI.LabelField(iconRect, contents);
             }
 
-            var newObj = EditorGUI.ObjectField(objectFieldRect, obj, typeof(Object), false);
-
-            if (newObj != obj)
-            {
-                if(newObj == null)
-                {
-                    guid.stringValue = string.Empty;
-                }
-                else
-                {
-                    var path = AssetDatabase.GetAssetPath(newObj);
-                    if (Utility.IsAssetCanBundled(path)) guid.stringValue = AssetDatabase.AssetPathToGUID(path);
-                }
-            }
         }
     }
 }

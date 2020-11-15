@@ -59,21 +59,40 @@ namespace BundleSystem
         /// <summary>
         /// Check if an asset is included in one of bundles in this setting
         /// </summary>
-        public bool TryGetBundleNameAndAssetPath(string guid, ref string bundleName, ref string assetPath)
+        public bool TryGetBundleNameAndAssetPath(string editorAssetPath, ref string bundleName, ref string assetPath)
         {
-            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
             foreach(var setting in BundleSettings)
             {
                 var bundleFolderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                if (path.StartsWith(bundleFolderPath))
+                if (editorAssetPath.StartsWith(bundleFolderPath))
                 {
                     //setting does not include subfolder and asset is in subfolder
-                    assetPath = path.Remove(0, bundleFolderPath.Length + 1);
+                    assetPath = editorAssetPath.Remove(0, bundleFolderPath.Length + 1);
                     if (!setting.IncludeSubfolder && assetPath.IndexOf('/') >= 0) break;
                     bundleName = setting.BundleName;
                     return true;
                 }
             }
+            return false;
+        }
+
+        public bool IsAssetIncluded(string bundleName, string assetName)
+        {
+            var dic = BundleSettings.ToDictionary(s => s.BundleName);
+            
+            //bundle name does not found
+            if(!dic.TryGetValue(bundleName, out var setting))
+            {
+                return false;
+            }
+
+            var folderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
+
+            //Resource.LoadAsset()
+            //UnityEditor.AssetDatabase.LoadAssetAtPath
+            //var assetPath = System.IO.Path.Combine(folderPath, assetName);
+            //var assets = UnityEditor.AssetDatabase.FindAssets(System.IO.Path.GetFileName(assetPath), new string[] { System.IO.Path.GetDirectoryName(assetPath)});
+
             return false;
         }
 #endif

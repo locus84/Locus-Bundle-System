@@ -46,17 +46,10 @@ namespace BundleSystem
         static Dictionary<string, LoadedBundle> s_SceneNames = new Dictionary<string, LoadedBundle>();
 
         //In editor, to support tests, while game is not playing, always use asset database.
-        public static bool UseAssetDatabase
-        {
-            get
-            {
 #if UNITY_EDITOR
-                return !Application.isPlaying || !AssetbundleBuildSettings.EditorInstance.EmulateInEditor;
-#else
-                return false;
+        public static bool UseAssetDatabase => !Application.isPlaying || !AssetbundleBuildSettings.EditorInstance.EmulateInEditor;
 #endif
-            }
-        }
+
         public static bool Initialized { get; private set; } = false;
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
@@ -114,12 +107,14 @@ namespace BundleSystem
 
             AutoReloadBundle = autoReloadBundle;
 
+#if UNITY_EDITOR
             if(UseAssetDatabase)
             {
                 Initialized = true; 
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
+#endif
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
@@ -225,12 +220,14 @@ namespace BundleSystem
                 yield break;
             }
 
+#if UNITY_EDITOR
             if (UseAssetDatabase)
             {
                 result.Result = new AssetbundleBuildManifest();
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
+#endif
 
             var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName));
             yield return manifestReq.SendWebRequest();
@@ -304,11 +301,13 @@ namespace BundleSystem
                 yield break;
             }
 
+#if UNITY_EDITOR
             if(UseAssetDatabase)
             {
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
+#endif
 
             var bundlesToUnload = new HashSet<string>(s_AssetBundles.Keys);
             var downloadBundleList = subsetNames == null ? manifest.BundleInfos : manifest.CollectSubsetBundleInfoes(subsetNames);
