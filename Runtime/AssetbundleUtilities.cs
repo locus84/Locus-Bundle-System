@@ -18,7 +18,7 @@ namespace BundleSystem
         public static bool IsAssetCanBundled(string assetPath)
         {
             var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-            return mainType != null && mainType != typeof(MonoScript) && mainType.IsSubclassOf(typeof(Object));
+            return mainType != null && mainType != typeof(DefaultAsset) &&  mainType != typeof(MonoScript) && mainType.IsSubclassOf(typeof(Object));
         }
 
         /// <summary>

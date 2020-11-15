@@ -67,8 +67,10 @@ namespace BundleSystem
                 if (editorAssetPath.StartsWith(bundleFolderPath))
                 {
                     //setting does not include subfolder and asset is in subfolder
+                    if (!Utility.IsAssetCanBundled(editorAssetPath)) continue;
                     var partialPath = editorAssetPath.Remove(0, bundleFolderPath.Length + 1); 
                     if (!setting.IncludeSubfolder && partialPath.IndexOf('/') >= bundleFolderPath.Length + 1) break;
+
                     assetPath = partialPath.Remove(partialPath.LastIndexOf('.'));
                     bundleName = setting.BundleName;
                     return true;
