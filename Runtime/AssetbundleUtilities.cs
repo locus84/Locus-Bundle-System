@@ -34,14 +34,14 @@ namespace BundleSystem
                 if (!IsAssetCanBundled(unityPath)) continue;
 
                 resultAssetPath.Add(unityPath);
-                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)));
+                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
             }
 
             if (includeSubdir)
             {
                 foreach (var subDir in dir.GetDirectories())
                 {
-                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name), resultAssetPath, resultLoadPath, subDir, includeSubdir);
+                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name).Replace('\\', '/'), resultAssetPath, resultLoadPath, subDir, includeSubdir);
                 }
             }
         }

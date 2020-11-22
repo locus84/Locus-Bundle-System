@@ -140,6 +140,9 @@ namespace BundleSystem
 
         public static T TrackObjectWithOwner<T>(GameObject owner, T loaded) where T : Object
         {
+#if UNITY_EDITOR
+            if (UseAssetDatabase) return loaded; //always valid on assetdatabase mode
+#endif
             if (owner.scene.name == null) throw new System.Exception("GameObject is not instantiated one");
             var id = loaded.GetInstanceID();
             if (!s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Original Object is not tracked");
@@ -153,6 +156,9 @@ namespace BundleSystem
 
         public static bool UntrackObjectWithOwner(GameObject owner, Object loaded)
         {
+#if UNITY_EDITOR
+            if (UseAssetDatabase) return true; //always valid on assetdatabase mode
+#endif
             var tupleKey = new TupleObjectKey(owner, loaded);
             if (!s_TrackingOwners.TryGetValue(tupleKey, out var tracking)) return false; //is not tracking combination
             s_TrackingOwners.Remove(tupleKey);
@@ -214,6 +220,9 @@ namespace BundleSystem
         //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
         private static void Update()
         {
+#if UNITY_EDITOR
+            if (UseAssetDatabase) return; //don't need to run this on assetdatabase mode
+#endif
             //first, owner
             {
                 int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackingOwners.Count);
