@@ -1,5 +1,7 @@
 # Locus Bundle System For Unity
 
+[Unity Forum Thread](https://forum.unity.com/threads/simpler-alternative-to-addressables.820998)
+
 [![openupm](https://img.shields.io/npm/v/com.locus.bundlesystem?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.locus.bundlesystem/)
 
 Assetbundle system from unity5 will be obsolute in future.\
