@@ -78,14 +78,13 @@ namespace BundleSystem
             foreach (var setting in settings.BundleSettings)
             {
                 //find folder
-                var folderPath = Path.GetFullPath(AssetDatabase.GUIDToAssetPath(setting.Folder.guid));
-                var dir = new DirectoryInfo(folderPath);
-                if (!dir.Exists) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
+                var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
+                if (!AssetDatabase.IsValidFolder(folderPath)) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
 
                 //collect assets
                 var assetPathes = new List<string>();
                 var loadPathes = new List<string>();
-                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, dir, setting.IncludeSubfolder);
+                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, folderPath, setting.IncludeSubfolder);
                 if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
 
                 //make assetbundlebuild

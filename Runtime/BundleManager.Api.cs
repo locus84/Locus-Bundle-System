@@ -35,8 +35,7 @@ namespace BundleSystem
                     assetPath.Clear();
                     loadPath.Clear();
                     var folderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                    var dir = new DirectoryInfo(Path.Combine(Application.dataPath, folderPath.Remove(0, 7)));
-                    Utility.GetFilesInDirectory(string.Empty, assetPath, loadPath, dir, setting.IncludeSubfolder);
+                    Utility.GetFilesInDirectory(string.Empty, assetPath, loadPath, folderPath, setting.IncludeSubfolder);
                     var assetList = new Dictionary<string, List<string>>();
                     for(int i = 0; i < assetPath.Count; i++)
                     {

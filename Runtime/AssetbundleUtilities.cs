@@ -24,13 +24,14 @@ namespace BundleSystem
         /// <summary>
         /// Search files in directory
         /// </summary>
-        public static void GetFilesInDirectory(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, DirectoryInfo dir, bool includeSubdir)
+        public static void GetFilesInDirectory(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, string folderPath, bool includeSubdir)
         {
+            var dir = new DirectoryInfo(Path.GetFullPath(folderPath));
             var files = dir.GetFiles();
             for (int i = 0; i < files.Length; i++)
             {
                 var currentFile = files[i];
-                var unityPath = currentFile.FullName.Remove(0, Application.dataPath.Length - 6).Replace('\\', '/');
+                var unityPath = Path.Combine(folderPath, currentFile.Name).Replace('\\', '/');
                 if (!IsAssetCanBundled(unityPath)) continue;
 
                 resultAssetPath.Add(unityPath);
@@ -41,7 +42,8 @@ namespace BundleSystem
             {
                 foreach (var subDir in dir.GetDirectories())
                 {
-                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name).Replace('\\', '/'), resultAssetPath, resultLoadPath, subDir, includeSubdir);
+                    var subdirName = $"{folderPath}/{subDir.Name}";
+                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name).Replace('\\', '/'), resultAssetPath, resultLoadPath, subdirName, includeSubdir);
                 }
             }
         }
