@@ -89,6 +89,13 @@ By using this, you can easily manage your dependencies, and there will be **no**
 If you find out execpted shared bundles are created, define a bundle warp them up, it'll automatically disappeared in next build.\
 ![image](https://user-images.githubusercontent.com/6591432/86384732-1c27af80-bcca-11ea-84f9-7791a7598969.png)
 
+**Folders in Packages**
+
+This system can handle assets in Packages Folder.\
+If you can drag folder from there, It'll be fine.(development/local packages)\
+But if you dragging is freezed, just copy and paste it's path.\
+![CapturePath](https://user-images.githubusercontent.com/6591432/99907679-85639a00-2d21-11eb-9414-f3ccf8682871.png)\
+![PasteButton](https://user-images.githubusercontent.com/6591432/99907681-8694c700-2d21-11eb-817a-c30392b2a180.png)
 
 ## API Examples
 \
