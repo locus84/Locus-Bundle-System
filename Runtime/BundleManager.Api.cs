@@ -10,12 +10,11 @@ namespace BundleSystem
     {
 #if UNITY_EDITOR
         private static AssetbundleBuildSettings s_EditorBuildSettings;
-        private static Dictionary<string, Dictionary<string, List<string>>> s_AssetListForEditor = new Dictionary<string, Dictionary<string, List<string>>>();
-
-        static List<string> s_EmptyStringList = new List<string>();
+        private static EditorAssetMap s_EditorAssetMap;
 
         static void SetupAssetdatabaseUsage()
         {
+
             s_EditorBuildSettings = AssetbundleBuildSettings.EditorInstance;
             if (s_EditorBuildSettings == null || !s_EditorBuildSettings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
 
@@ -26,42 +25,15 @@ namespace BundleSystem
 
             UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
 
-            if(UseAssetDatabase)
-            {
-                var assetPath = new List<string>();
-                var loadPath = new List<string>();
-                foreach (var setting in s_EditorBuildSettings.BundleSettings)
-                {
-                    assetPath.Clear();
-                    loadPath.Clear();
-                    var folderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                    Utility.GetFilesInDirectory(string.Empty, assetPath, loadPath, folderPath, setting.IncludeSubfolder);
-                    var assetList = new Dictionary<string, List<string>>();
-                    for(int i = 0; i < assetPath.Count; i++)
-                    {
-                        if(assetList.TryGetValue(loadPath[i], out var list))
-                        {
-                            list.Add(assetPath[i]);
-                            continue;
-                        }
-                        assetList.Add(loadPath[i], new List<string>() { assetPath[i] });
-                    }
-                    s_AssetListForEditor.Add(setting.BundleName, assetList);
-                }
-            }
+            //create editor asset map
+            if(UseAssetDatabase) s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
         }
 
-        static List<string> GetAssetPathsFromAssetBundleAndAssetName(string bundleName, string assetName)
+        public static void SetupApiTestSettings(AssetbundleBuildSettings settings)
         {
-            if (!s_AssetListForEditor.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringList;
-            if (!innerDic.TryGetValue(assetName, out var pathList)) return s_EmptyStringList;
-            return pathList;
-        }
-
-        static List<string> GetAssetPathsFromAssetBundle(string bundleName)
-        {
-            if (!s_AssetListForEditor.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringList;
-            return innerDic.Values.SelectMany(list => list).ToList();
+            UseAssetDatabase = true;
+            //create editor asset map only for testing
+            s_EditorAssetMap = new EditorAssetMap(settings);
         }
 #endif
 
@@ -70,7 +42,7 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
-                var assets = GetAssetPathsFromAssetBundle(bundleName);
+                var assets = s_EditorAssetMap.GetAssetPaths(bundleName);
                 if (assets.Count == 0) return new T[0];
 
                 var typeExpected = typeof(T);
@@ -95,24 +67,11 @@ namespace BundleSystem
         public static T Load<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase)
+            if (UseAssetDatabase) 
             {
-                var assets = GetAssetPathsFromAssetBundleAndAssetName(bundleName, assetName);
-                if (assets.Count == 0) return null;
-
-                var typeExpected = typeof(T);
-                var foundIndex = 0;
-
-                for (int i = 0; i < assets.Count; i++)
-                {
-                    var foundType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(assets[i]);
-                    if (foundType == typeExpected || foundType.IsSubclassOf(typeExpected))
-                    {
-                        foundIndex = i;
-                        break;
-                    }
-                }
-                return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assets[foundIndex]);
+                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
+                return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath);
             }
 #endif
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
@@ -124,7 +83,12 @@ namespace BundleSystem
         public static BundleRequest<T> LoadAsync<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return new BundleRequest<T>(Load<T>(bundleName, assetName));
+            if (UseAssetDatabase) 
+            {
+                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                if(string.IsNullOrEmpty(assetPath)) return new BundleRequest<T>((T)null); //asset not exist
+                return new BundleRequest<T>(UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath));
+            }
 #endif
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
             var request = foundBundle.Bundle.LoadAssetAsync<T>(assetName);
@@ -146,16 +110,9 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
-                var assets = GetAssetPathsFromAssetBundleAndAssetName(bundleName, sceneName);
-                if (assets.Count == 0 || UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(assets[0]) == typeof(Scene))
-                {
-                    Debug.LogError("Request scene name does not exist in streamed scenes : " + sceneName);
-                    return;
-                }
-
-                //this loads scene from playmode
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(assets[0], new LoadSceneParameters(mode));
-                return;
+                var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
+                if(string.IsNullOrEmpty(scenePath)) return; // scene does not exist
+                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
             SceneManager.LoadScene(sceneName, mode);
@@ -166,15 +123,9 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
-                var assets = GetAssetPathsFromAssetBundleAndAssetName(bundleName, sceneName);
-                if (assets.Count == 0 || UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(assets[0]) == typeof(Scene))
-                {
-                    Debug.LogError("Request scene name does not exist in streamed scenes : " + sceneName);
-                    return null;
-                }
-
-                //this loads scene from playmode
-                return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(assets[0], new LoadSceneParameters(mode));
+                var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
+                if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
+                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
             return SceneManager.LoadSceneAsync(sceneName, mode);
@@ -183,15 +134,10 @@ namespace BundleSystem
         public static bool IsAssetExist(string bundleName, string assetName)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase)
-            {
-                var assets = GetAssetPathsFromAssetBundleAndAssetName(bundleName, assetName);
-                return assets.Count > 0;
-            }
-
+            if (UseAssetDatabase) return s_EditorAssetMap.IsAssetExist(bundleName, assetName);
 #endif
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return false;
-            return foundBundle.AssetNames.Contains(assetName);
+            return foundBundle.Bundle.Contains(assetName);
         }
 
         public static GameObject Instantiate(GameObject original)

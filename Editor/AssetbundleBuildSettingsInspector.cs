@@ -86,6 +86,7 @@ namespace BundleSystem
 
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
             var settings = target as AssetbundleBuildSettings;
 
             list.DoLayoutList();
@@ -177,6 +178,7 @@ namespace BundleSystem
             }
 
             EditorGUI.EndDisabledGroup();
+            serializedObject.ApplyModifiedProperties();
         }
     }
 

@@ -21,7 +21,6 @@ namespace BundleSystem
             public string Name;
             public AssetBundle Bundle;
             public Hash128 Hash;
-            public HashSet<string> AssetNames;
             public List<string> Dependencies; //including self
             public bool IsLocalBundle;
             public string LoadPath;
@@ -34,7 +33,6 @@ namespace BundleSystem
                 LoadPath = loadPath;
                 Bundle = bundle; 
                 Hash = info.Hash;
-                AssetNames = new HashSet<string>(bundle.GetAllAssetNames());
                 Dependencies = info.Dependencies;
                 Dependencies.Add(Name);
             }
