@@ -17,14 +17,34 @@ namespace BundleSystem
             if (settings == null) return;
             if (Directory.Exists(AssetbundleBuildSettings.LocalBundleRuntimePath)) Directory.Delete(AssetbundleBuildSettings.LocalBundleRuntimePath, true);
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
+
+
+            var localBundleSourcePath = Path.Combine(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
+            if(!Directory.Exists(localBundleSourcePath))
+            {
+                if(Application.isBatchMode)
+                {
+                    Debug.LogError("Missing built local bundle directory, Locus bundle system won't work properly.");
+                    return; //we can't build now as it's in batchmode
+                }
+                else
+                {
+                    var buildNow = EditorUtility.DisplayDialog("LocusBundleSystem", "Warning - Missing built local bundle directory, would you like to build now?", "Yes", "Not now");
+                    if(!buildNow) return; //user declined
+                    AssetbundleBuilder.BuildAssetBundles(BuildType.Local);
+                }
+            }
+
             FileUtil.CopyFileOrDirectory(Path.Combine(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()), AssetbundleBuildSettings.LocalBundleRuntimePath);
             AssetDatabase.Refresh();
         }
 
         public void OnPostprocessBuild(BuildReport report)
         {
-            FileUtil.DeleteFileOrDirectory(AssetbundleBuildSettings.LocalBundleRuntimePath);
-            AssetDatabase.Refresh();
+            if(FileUtil.DeleteFileOrDirectory(AssetbundleBuildSettings.LocalBundleRuntimePath))
+            {
+                AssetDatabase.Refresh();
+            }
         }
     }
 }
