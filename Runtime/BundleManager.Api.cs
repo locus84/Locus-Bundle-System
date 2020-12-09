@@ -29,8 +29,10 @@ namespace BundleSystem
             if(UseAssetDatabase) s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
         }
 
-        public static void SetupApiTestSettings(AssetbundleBuildSettings settings)
+        public static void SetupApiTestSettings(AssetbundleBuildSettings settings = null)
         {
+            if(settings == null) settings = AssetbundleBuildSettings.EditorInstance;
+            if(settings == null || !settings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
             UseAssetDatabase = true;
             //create editor asset map only for testing
             s_EditorAssetMap = new EditorAssetMap(settings);
