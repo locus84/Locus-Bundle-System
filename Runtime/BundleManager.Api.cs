@@ -123,6 +123,11 @@ namespace BundleSystem
             }
         }
 
+        public static void LoadScene(BundledAssetPath path, LoadSceneMode mode)
+        {
+            LoadScene(path.BundleName, path.AssetName, mode);
+        }
+
         public static void LoadScene(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
@@ -136,6 +141,11 @@ namespace BundleSystem
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             SceneManager.LoadScene(Path.GetFileName(sceneName), mode);
+        }
+        
+        public static AsyncOperation LoadSceneAsync(BundledAssetPath path, LoadSceneMode mode)
+        {
+            return LoadSceneAsync(path.BundleName, path.AssetName, mode);
         }
 
         public static AsyncOperation LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)

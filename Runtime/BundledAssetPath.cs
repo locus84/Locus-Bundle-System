@@ -28,6 +28,11 @@ namespace BundleSystem
         {
             return BundleManager.LoadAsync<T>(BundleName, AssetName);
         }
+
+        public bool Exists()
+        {
+            return BundleManager.IsAssetExist(BundleName, AssetName);
+        }
     }
 }
 
