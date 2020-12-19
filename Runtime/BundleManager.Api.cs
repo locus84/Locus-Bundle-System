@@ -106,7 +106,6 @@ namespace BundleSystem
             }
         }
 
-
         public static void LoadScene(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
@@ -117,7 +116,7 @@ namespace BundleSystem
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
-            SceneManager.LoadScene(sceneName, mode);
+            SceneManager.LoadScene(Path.GetFileName(sceneName), mode);
         }
 
         public static AsyncOperation LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)
@@ -141,7 +140,7 @@ namespace BundleSystem
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return false;
             return foundBundle.Bundle.Contains(assetName);
         }
-
+        
         public static GameObject Instantiate(GameObject original)
         {
 #if UNITY_EDITOR
