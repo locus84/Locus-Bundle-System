@@ -53,6 +53,33 @@ namespace BundleSystem
             return !BundleSettings.GroupBy(setting => setting.BundleName).Any(group => group.Count() > 1 ||
                 string.IsNullOrEmpty(group.Key));
         }
+
+        
+        /// <summary>
+        /// Check if an asset is included in one of bundles in this setting
+        /// </summary>
+        public bool TryGetBundleNameAndAssetPath(string editorAssetPath, out string bundleName, out string assetPath)
+        {
+            foreach(var setting in BundleSettings)
+            {
+                var bundleFolderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
+                if (editorAssetPath.StartsWith(bundleFolderPath))
+                {
+                    //setting does not include subfolder and asset is in subfolder
+                    if (!Utility.IsAssetCanBundled(editorAssetPath)) continue;
+                    var partialPath = editorAssetPath.Remove(0, bundleFolderPath.Length + 1); 
+                    if (!setting.IncludeSubfolder && partialPath.IndexOf('/') >= bundleFolderPath.Length + 1) break;
+
+                    assetPath = partialPath.Remove(partialPath.LastIndexOf('.'));
+                    bundleName = setting.BundleName;
+                    return true;
+                }
+            }
+
+            bundleName = string.Empty;
+            assetPath = string.Empty;
+            return false;
+        }
 #endif
         public const string ManifestFileName = "Manifest.json";
         public static string LocalBundleRuntimePath => Application.streamingAssetsPath + "/localbundles/";

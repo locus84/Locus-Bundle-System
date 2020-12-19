@@ -43,7 +43,9 @@ namespace BundleSystem
         static Dictionary<string, Hash128> s_LocalBundles = new Dictionary<string, Hash128>();
         static Dictionary<string, LoadedBundle> s_SceneNames = new Dictionary<string, LoadedBundle>();
 
-        public static bool UseAssetDatabase { get; private set; } = false;
+#if UNITY_EDITOR
+        public static bool UseAssetDatabase { get; private set; } = true;
+#endif
         public static bool Initialized { get; private set; } = false;
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
@@ -100,13 +102,6 @@ namespace BundleSystem
             }
 
             AutoReloadBundle = autoReloadBundle;
-
-            if(UseAssetDatabase)
-            {
-                Initialized = true; 
-                result.Done(BundleErrorCode.Success);
-                yield break;
-            }
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
@@ -212,12 +207,14 @@ namespace BundleSystem
                 yield break;
             }
 
+#if UNITY_EDITOR
             if (UseAssetDatabase)
             {
                 result.Result = new AssetbundleBuildManifest();
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
+#endif
 
             var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName));
             yield return manifestReq.SendWebRequest();
@@ -291,11 +288,13 @@ namespace BundleSystem
                 yield break;
             }
 
+#if UNITY_EDITOR
             if(UseAssetDatabase)
             {
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
+#endif
 
             var bundlesToUnload = new HashSet<string>(s_AssetBundles.Keys);
             var downloadBundleList = subsetNames == null ? manifest.BundleInfos : manifest.CollectSubsetBundleInfoes(subsetNames);

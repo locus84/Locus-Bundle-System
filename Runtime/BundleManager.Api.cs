@@ -26,16 +26,27 @@ namespace BundleSystem
             UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
 
             //create editor asset map
-            if(UseAssetDatabase) s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
+            if(UseAssetDatabase)
+            {
+                s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
+                //set initialied so it does not need explit call initialzed when using aassetdatabase
+                Initialized = true;
+            }
         }
 
         public static void SetupApiTestSettings(AssetbundleBuildSettings settings = null)
         {
+            if(Application.isPlaying) throw new System.Exception("This funcion cannot be called while playing!");
             if(settings == null) settings = AssetbundleBuildSettings.EditorInstance;
             if(settings == null || !settings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
             UseAssetDatabase = true;
             //create editor asset map only for testing
             s_EditorAssetMap = new EditorAssetMap(settings);
+        }
+
+        private static void EnsureAssetDatabase()
+        {
+            if(!Application.isPlaying && s_EditorAssetMap == null) throw new System.Exception("EditorAssetMap is null, try call SetupApiTestSettings before calling actual api in non-play mode");
         }
 #endif
 
@@ -44,6 +55,7 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
+                EnsureAssetDatabase();
                 var assets = s_EditorAssetMap.GetAssetPaths(bundleName);
                 if (assets.Count == 0) return new T[0];
 
@@ -59,6 +71,7 @@ namespace BundleSystem
                 return foundList.ToArray();
             }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return new T[0];
             var loadedAssets = foundBundle.Bundle.LoadAllAssets<T>();
             TrackObjectsInternal(loadedAssets, foundBundle);
@@ -71,11 +84,13 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
+                EnsureAssetDatabase();
                 var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
                 return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath);
             }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
             var loadedAsset = foundBundle.Bundle.LoadAsset<T>(assetName);
             TrackObjectInternal(loadedAsset, foundBundle);
@@ -87,11 +102,13 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
+                EnsureAssetDatabase();
                 var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return new BundleRequest<T>((T)null); //asset not exist
                 return new BundleRequest<T>(UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath));
             }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
             var request = foundBundle.Bundle.LoadAssetAsync<T>(assetName);
             request.completed += op => AsyncAssetLoaded(request, foundBundle);
@@ -111,11 +128,13 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
+                EnsureAssetDatabase();
                 var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return; // scene does not exist
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             SceneManager.LoadScene(Path.GetFileName(sceneName), mode);
         }
 
@@ -124,19 +143,26 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabase)
             {
+                EnsureAssetDatabase();
                 var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             return SceneManager.LoadSceneAsync(sceneName, mode);
         }
 
         public static bool IsAssetExist(string bundleName, string assetName)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return s_EditorAssetMap.IsAssetExist(bundleName, assetName);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return s_EditorAssetMap.IsAssetExist(bundleName, assetName);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return false;
             return foundBundle.Bundle.Contains(assetName);
         }
@@ -144,8 +170,13 @@ namespace BundleSystem
         public static GameObject Instantiate(GameObject original)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return GameObject.Instantiate(original);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return GameObject.Instantiate(original);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             var id = original.GetInstanceID();
             if (original.scene.name != null || !s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Object must be valid bundle object");
             var instantiated = GameObject.Instantiate(original);
@@ -159,8 +190,13 @@ namespace BundleSystem
         public static GameObject Instantiate(GameObject original, Transform parent)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return GameObject.Instantiate(original, parent);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return GameObject.Instantiate(original, parent);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             var id = original.GetInstanceID();
             if (original.scene.name != null || !s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Object must be valid bundle object");
             var instantiated = GameObject.Instantiate(original, parent);
@@ -174,8 +210,13 @@ namespace BundleSystem
         public static GameObject Instantiate(GameObject original, Transform parent, bool instantiateInWorldSpace)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return GameObject.Instantiate(original, parent, instantiateInWorldSpace);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return GameObject.Instantiate(original, parent, instantiateInWorldSpace);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             var id = original.GetInstanceID();
             if (original.scene.name != null || !s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Object must be valid bundle object");
             var instantiated = GameObject.Instantiate(original, parent, instantiateInWorldSpace);
@@ -189,8 +230,13 @@ namespace BundleSystem
         public static GameObject Instantiate(GameObject original, Vector3 position, Quaternion rotation)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return GameObject.Instantiate(original, position, rotation);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return GameObject.Instantiate(original, position, rotation);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             var id = original.GetInstanceID();
             if (original.scene.name != null || !s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Object must be valid bundle object");
             var instantiated = GameObject.Instantiate(original, position, rotation);
@@ -204,8 +250,13 @@ namespace BundleSystem
         public static GameObject Instantiate(GameObject original, Vector3 position, Quaternion rotation, Transform parent)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return GameObject.Instantiate(original, position, rotation, parent);
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return GameObject.Instantiate(original, position, rotation, parent);
+            }
 #endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             var id = original.GetInstanceID();
             if (original.scene.name != null || !s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Object must be valid bundle object");
             var instantiated = GameObject.Instantiate(original, position, rotation, parent);
