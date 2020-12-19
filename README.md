@@ -99,6 +99,15 @@ But if you dragging is freezed, just copy and paste it's path.\
 ![CapturePath](https://user-images.githubusercontent.com/6591432/99907679-85639a00-2d21-11eb-9414-f3ccf8682871.png)\
 ![PasteButton](https://user-images.githubusercontent.com/6591432/99907681-8694c700-2d21-11eb-817a-c30392b2a180.png)
 
+**Bundled Asset Path**
+
+This is a utility struct that helps you save some time to write actual path yourself.
+```cs
+BundleSystem.BundledAssetPath MyAsset;
+```
+![Honeycam 2020-12-19 23-25-54](https://user-images.githubusercontent.com/6591432/102692341-072de100-4256-11eb-9634-9203cd2761ab.gif)
+
+
 ## API Examples
 \
 **Initialization Example**
@@ -205,6 +214,19 @@ But if you dragging is freezed, just copy and paste it's path.\
     }
 ```
 
+\
+**Editor Test Script**
+```cs
+      [Test]
+      public void BundleTest()
+      {
+         //call this bofore you call bundle manager api while not playing
+         //while not playing, BundleManager always utilies AssetDatabase
+         BundleSystem.BundleManager.SetupApiTestSettings();
+         Assert.IsTrue(BundleSystem.BundleManager.IsAssetExist("LocalScene", "Inner/TitleScene"));
+         Assert.IsTrue(BundleSystem.BundleManager.IsAssetExist("Sprites", "MySprite"));
+      }
+```
 <br />
 
 ## Installation
