@@ -131,6 +131,7 @@ namespace BundleSystem
         public static void LoadScene(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
+            if (!Application.isPlaying) throw new System.Exception("This function does not support non-playing mode!");
             if (UseAssetDatabase)
             {
                 EnsureAssetDatabase();
@@ -151,6 +152,7 @@ namespace BundleSystem
         public static AsyncOperation LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
+            if (!Application.isPlaying) throw new System.Exception("This function does not support non-playing mode!");
             if (UseAssetDatabase)
             {
                 EnsureAssetDatabase();
