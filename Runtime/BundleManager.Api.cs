@@ -138,6 +138,7 @@ namespace BundleSystem
                 var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return; // scene does not exist
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
+                return;
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
@@ -158,7 +159,7 @@ namespace BundleSystem
                 EnsureAssetDatabase();
                 var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
+                return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
