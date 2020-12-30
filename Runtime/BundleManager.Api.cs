@@ -106,7 +106,7 @@ namespace BundleSystem
                 EnsureAssetDatabase();
                 var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
-                var assets = UnityEditor.AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(assetPath);
                 return assets.Select(a => a as T).Where(a => a != null).ToArray();
             }
 #endif
