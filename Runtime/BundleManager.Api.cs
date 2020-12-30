@@ -97,6 +97,30 @@ namespace BundleSystem
             return loadedAsset;
         }
 
+        
+        public static T[] LoadWithSubAssets<T>(string bundleName, string assetName) where T : UnityEngine.Object
+        {
+#if UNITY_EDITOR
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+                return assets.Select(a => a as T).Where(a => a != null).ToArray();
+            }
+#endif
+            if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
+            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
+            var loadedAssets = foundBundle.Bundle.LoadAssetWithSubAssets<T>(assetName);
+            foreach(var loaded in loadedAssets)
+            {
+                TrackObjectInternal(loaded, foundBundle);
+            }
+            return loadedAssets;
+        }
+
+
         public static BundleRequest<T> LoadAsync<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
