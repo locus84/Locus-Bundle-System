@@ -93,7 +93,7 @@ namespace BundleSystem
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
             var loadedAsset = foundBundle.Bundle.LoadAsset<T>(assetName);
-            TrackObjectInternal(loadedAsset, foundBundle);
+            if(loadedAsset != null) TrackObjectInternal(loadedAsset, foundBundle);
             return loadedAsset;
         }
 
@@ -111,12 +111,9 @@ namespace BundleSystem
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
-            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
+            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return new T[0];
             var loadedAssets = foundBundle.Bundle.LoadAssetWithSubAssets<T>(assetName);
-            foreach(var loaded in loadedAssets)
-            {
-                TrackObjectInternal(loaded, foundBundle);
-            }
+            TrackObjectsInternal(loadedAssets, foundBundle);
             return loadedAssets;
         }
 
@@ -133,7 +130,7 @@ namespace BundleSystem
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
-            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return null;
+            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return new BundleRequest<T>((T)null); //asset not exist
             var request = foundBundle.Bundle.LoadAssetAsync<T>(assetName);
             request.completed += op => AsyncAssetLoaded(request, foundBundle);
             return new BundleRequest<T>(request);
@@ -206,6 +203,8 @@ namespace BundleSystem
         
         public static GameObject Instantiate(GameObject original)
         {
+            if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
+
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
@@ -226,6 +225,9 @@ namespace BundleSystem
 
         public static GameObject Instantiate(GameObject original, Transform parent)
         {
+            if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
+            if(parent == null) throw new System.Exception("The parent transform is null");
+
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
@@ -246,6 +248,9 @@ namespace BundleSystem
 
         public static GameObject Instantiate(GameObject original, Transform parent, bool instantiateInWorldSpace)
         {
+            if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
+            if(parent == null) throw new System.Exception("The parent transform is null");
+
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
@@ -266,6 +271,8 @@ namespace BundleSystem
 
         public static GameObject Instantiate(GameObject original, Vector3 position, Quaternion rotation)
         {
+            if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
+
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
@@ -286,6 +293,9 @@ namespace BundleSystem
 
         public static GameObject Instantiate(GameObject original, Vector3 position, Quaternion rotation, Transform parent)
         {
+            if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
+            if(parent == null) throw new System.Exception("The parent transform is null");
+
 #if UNITY_EDITOR
             if (UseAssetDatabase) 
             {
