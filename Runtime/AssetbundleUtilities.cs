@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace BundleSystem
 {
-    using System.Linq;
 #if UNITY_EDITOR
+    using System.Linq;
     using UnityEditor;
     /// <summary>
     /// utilities can be used in runtime but in editor
@@ -51,7 +51,6 @@ namespace BundleSystem
         /// <summary>
         /// collect bundle deps to actually use in runtime
         /// </summary>
-
         public static List<string> CollectBundleDependencies<T>(Dictionary<string, T> deps, string name, bool includeSelf = false) where T : IEnumerable<string>
         {
             var depsHash = new HashSet<string>();
@@ -69,6 +68,52 @@ namespace BundleSystem
                 if (result.Add(dependency))
                     CollectBundleDependenciesRecursive(result, deps, dependency, rootName);
             }
+        }
+
+        //prefab placed into a scene is encoded into scene when building, and it can't be referenced as a single prefab.
+        //this is somewhat weird but this happens on scriptable build pipeline
+        public static string[] UnwarpSceneEncodedPrefabs(string scenePath, string[] sceneDeps)
+        {
+            var list = new List<string>(sceneDeps);
+            var settings = new UnityEditor.Build.Content.BuildSettings();
+            settings.target = EditorUserBuildSettings.activeBuildTarget;
+            settings.group = BuildPipeline.GetBuildTargetGroup(settings.target);
+            var usageTags = new UnityEditor.Build.Content.BuildUsageTagSet();
+            var depsCache = new UnityEditor.Build.Content.BuildUsageCache();
+
+            //extract deps form scriptable build pipeline
+            var sceneInfo = UnityEditor.Build.Content.ContentBuildInterface.CalculatePlayerDependenciesForScene(scenePath, settings, usageTags, depsCache);
+
+            //this is needed as calculate function actumatically pops up progress bar
+            EditorUtility.ClearProgressBar();
+
+            //we do care only prefab
+            var hashSet = new HashSet<string>();
+            foreach(var objInfo in sceneInfo.referencedObjects)
+            {
+                if(objInfo.fileType != UnityEditor.Build.Content.FileType.MetaAssetType) continue;
+                var path = AssetDatabase.GUIDToAssetPath(objInfo.guid.ToString());
+                if(!path.EndsWith(".prefab")) continue;
+                hashSet.Add(path);
+            }
+            
+            //remove direct reference of the prefab and append the deps of the prefab we removed
+            var appendList = new List<string>();
+            for(int i = list.Count - 1; i >= 0; i--)
+            {
+                var child = list[i];
+                if(AssetDatabase.GetMainAssetTypeAtPath(child) != typeof(UnityEngine.GameObject)) continue;
+                if(hashSet.Contains(child)) continue;
+                list.RemoveAt(i);
+                var deps = AssetDatabase.GetDependencies(child, false);
+                appendList.AddRange(deps);
+            }
+
+            //append we found into original list except prefab itself
+            list.AddRange(appendList);
+
+            //remove duplicates and return
+            return list.Distinct().ToArray(); 
         }
     }
 #endif
