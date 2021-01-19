@@ -4,17 +4,40 @@ using UnityEngine;
 
 namespace BundleSystem
 {
+    //bundleAssetPath must have it's own functions as it doesn't need any
+    //using needed, and struct -> interface conversion allocates struct to heap
     [System.Serializable]
-    public struct BundledAssetPath : IBundledAssetPath
+    public struct BundledAssetPath
     {
         [SerializeField]
         public string BundleName;
-        public string GetBundleName() => BundleName;
 
         [SerializeField]
         public string AssetName;
-        public string GetAssetName() => AssetName;
+        
+        /// <summary>
+        /// Load Asset
+        /// </summary>
+        public T Load<T>() where T : Object
+        {
+            return BundleManager.Load<T>(BundleName, AssetName);
+        }
+        
+        /// <summary>
+        /// Load AssetAsync
+        /// </summary>
+        public BundleRequest<T> LoadAsync<T>() where T : Object
+        {
+            return BundleManager.LoadAsync<T>(BundleName, AssetName);
+        }
 
+        /// <summary>
+        /// Is specified asset exist in current bundle settings?
+        /// </summary>
+        public bool Exists()
+        {
+            return BundleManager.IsAssetExist(BundleName, AssetName);
+        }
     }
 
     public interface IBundledAssetPath
