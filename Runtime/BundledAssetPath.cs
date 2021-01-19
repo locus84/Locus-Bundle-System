@@ -5,33 +5,48 @@ using UnityEngine;
 namespace BundleSystem
 {
     [System.Serializable]
-    public struct BundledAssetPath
+    public struct BundledAssetPath : IBundledAssetPath
     {
         [SerializeField]
         public string BundleName;
+        public string GetBundleName() => BundleName;
 
         [SerializeField]
         public string AssetName;
+        public string GetAssetName() => AssetName;
 
+    }
+
+    public interface IBundledAssetPath
+    {
+        string GetBundleName();
+        string GetAssetName();
+    }
+
+    public static class BundledAssetPathExtension
+    {
         /// <summary>
         /// Load Asset
         /// </summary>
-        public T Load<T>() where T : Object
+        public static T Load<T>(this IBundledAssetPath path) where T : Object
         {
-            return BundleManager.Load<T>(BundleName, AssetName);
+            return BundleManager.Load<T>(path.GetBundleName(), path.GetAssetName());
         }
-
+        
         /// <summary>
         /// Load AssetAsync
         /// </summary>
-        public BundleRequest<T> LoadAsync<T>() where T : Object
+        public static BundleRequest<T> LoadAsync<T>(this IBundledAssetPath path) where T : Object
         {
-            return BundleManager.LoadAsync<T>(BundleName, AssetName);
+            return BundleManager.LoadAsync<T>(path.GetBundleName(), path.GetAssetName());
         }
 
-        public bool Exists()
+        /// <summary>
+        /// Is specified asset exist in current bundle settings?
+        /// </summary>
+        public static bool Exists(this IBundledAssetPath path)
         {
-            return BundleManager.IsAssetExist(BundleName, AssetName);
+            return BundleManager.IsAssetExist(path.GetBundleName(), path.GetAssetName());
         }
     }
 }

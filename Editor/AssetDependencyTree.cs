@@ -102,6 +102,10 @@ namespace BundleSystem
             public void CollectNodes(Context context)
             {
                 var childDeps = AssetDatabase.GetDependencies(Path, false);
+
+                //if it's a scene unwarp placed prefab directly into the scene
+                if(Path.EndsWith(".unity")) childDeps = Utility.UnwarpSceneEncodedPrefabs(Path, childDeps);
+
                 foreach (var child in childDeps)
                 {
                     //is not bundled file
