@@ -111,7 +111,7 @@ namespace BundleSystem
                 }
             }
 
-            return bundleInfoDic.Values.ToList();
+            return resultDic.Values.ToList();
         }
     }
 }
