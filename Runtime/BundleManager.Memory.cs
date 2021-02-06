@@ -169,7 +169,8 @@ namespace BundleSystem
         static List<GameObject> s_SceneRootObjectCache = new List<GameObject>();
         private static void TrackOnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
-            if (s_SceneNames.TryGetValue(scene.name, out var loadedBundle))
+            //if scene is from assetbundle, path will be assetpath inside bundle
+            if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
                 RetainBundleInternal(loadedBundle, 1);
                 scene.GetRootGameObjects(s_SceneRootObjectCache);
@@ -181,7 +182,8 @@ namespace BundleSystem
 
         private static void TrackOnSceneUnLoaded(UnityEngine.SceneManagement.Scene scene)
         {
-            if (s_SceneNames.TryGetValue(scene.name, out var loadedBundle))
+            //if scene is from assetbundle, path will be assetpath inside bundle
+            if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
                 ReleaseBundleInternal(loadedBundle, 1);
             }
