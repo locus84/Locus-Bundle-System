@@ -132,6 +132,8 @@ namespace BundleSystem
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return new BundleRequest<T>((T)null); //asset not exist
             var request = foundBundle.Bundle.LoadAssetAsync<T>(assetName);
+            //need to keep bundle while loading, so we retain before load, release after load
+            RetainBundleInternal(foundBundle, 1);
             request.completed += op => AsyncAssetLoaded(request, foundBundle);
             return new BundleRequest<T>(request);
         }
@@ -142,6 +144,9 @@ namespace BundleSystem
             {
                 TrackObjectInternal(request.asset, loadedBundle);
             }
+            
+            //because we did increase ref count in loadasync function, it need to be released
+            ReleaseBundleInternal(loadedBundle, 1);
         }
 
         public static void LoadScene(BundledAssetPath path, LoadSceneMode mode)
@@ -184,7 +189,23 @@ namespace BundleSystem
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
-            return SceneManager.LoadSceneAsync(sceneName, mode);
+
+            //like default scene load functionality, we return null if something went wrong
+            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) 
+            {
+                Debug.LogError("Bundle you requested could not be found");
+                return null;
+            }
+
+            //need to keep bundle while loading, so we retain before load, release after load
+            var aop = SceneManager.LoadSceneAsync(Path.GetFileName(sceneName), mode);
+            if(aop != null)
+            {
+                RetainBundleInternal(foundBundle, 1);
+                aop.completed += op => ReleaseBundleInternal(foundBundle, 1);
+            }
+
+            return aop;
         }
 
         public static bool IsAssetExist(string bundleName, string assetName)
