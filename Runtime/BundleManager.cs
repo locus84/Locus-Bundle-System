@@ -314,7 +314,7 @@ namespace BundleSystem
                 var isCached = Caching.IsVersionCached(bundleInfo.AsCached);
                 result.SetCachedBundle(isCached);
 
-                var loadURL = islocalBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName);
+                var loadURL = islocalBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName).Replace('\\', '/');
                 if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {islocalBundle}, isCached {isCached}");
                 LoadedBundle previousBundle;
 
