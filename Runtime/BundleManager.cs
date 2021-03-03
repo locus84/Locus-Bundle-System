@@ -172,7 +172,7 @@ namespace BundleSystem
                 s_LocalBundles.Add(localBundleInfo.BundleName, localBundleInfo.Hash);
             }
 
-            RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget);
+            RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget).Replace('\\', '/');
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
                 RemoteURL = "file://" + Path.Combine(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
@@ -216,7 +216,7 @@ namespace BundleSystem
             }
 #endif
 
-            var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName));
+            var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName).Replace('\\', '/'));
             yield return manifestReq.SendWebRequest();
 
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
