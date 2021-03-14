@@ -70,7 +70,7 @@ namespace BundleSystem
             SetupAssetdatabaseUsage();
             LocalURL = Path.Combine(s_EditorBuildSettings.LocalOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
-            if (Application.platform != RuntimePlatform.Android) LocalURL = "file://" + LocalURL;
+            if (Application.platform != RuntimePlatform.Android && Application.platform != RuntimePlatform.WebGLPlayer) LocalURL = "file://" + LocalURL;
         }
 
         static void CollectSceneNames(LoadedBundle loadedBundle)
