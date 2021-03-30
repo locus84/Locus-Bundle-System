@@ -130,13 +130,12 @@ namespace BundleSystem
         public static string CombinePath(params string[] args)
         {
             var sb = new System.Text.StringBuilder();
-            var prevHasSeperateChar = true;
             for(int i = 0; i < args.Length; i++)
             {
-                if(!prevHasSeperateChar) sb.Append('/');
-                var toAppend = args[i].TrimStart('/');
-                prevHasSeperateChar = toAppend.EndsWith("/");
-                sb.Append(toAppend);
+                //skip empty
+                if(string.IsNullOrEmpty(args[i])) continue;
+                if(sb.Length > 0) sb.Append('/');
+                sb.Append(args[i]);
             }
             return sb.ToString();
         }
