@@ -14,8 +14,8 @@ namespace BundleSystem
             {
                 var buildTargetString = EditorUserBuildSettings.activeBuildTarget.ToString();
                 var credential = new NetworkCredential(settings.FtpUserName, settings.FtpUserPass);
-                var uploadRootPath = Path.Combine(settings.FtpHost, buildTargetString);
-                var dirInfo = new DirectoryInfo(Path.Combine(settings.RemoteOutputPath, buildTargetString));
+                var uploadRootPath = Utility.CombinePath(settings.FtpHost, buildTargetString);
+                var dirInfo = new DirectoryInfo(Utility.CombinePath(settings.RemoteOutputPath, buildTargetString));
                 var files = dirInfo.GetFiles();
                 var progress = 0f;
                 var progressStep = 1f / files.Length;
@@ -23,7 +23,7 @@ namespace BundleSystem
                 {
                     byte[] data = File.ReadAllBytes(fileInfo.FullName);
                     EditorUtility.DisplayProgressBar("Uploading AssetBundles", fileInfo.Name, progress);
-                    FtpUpload(Path.Combine(uploadRootPath, fileInfo.Name), data, credential);
+                    FtpUpload(Utility.CombinePath(uploadRootPath, fileInfo.Name), data, credential);
                     progress += progressStep;
                 }
             }

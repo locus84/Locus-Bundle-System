@@ -68,7 +68,7 @@ namespace BundleSystem
             LocalURL = AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
-            LocalURL = Path.Combine(s_EditorBuildSettings.LocalOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+            LocalURL = Utility.CombinePath(s_EditorBuildSettings.LocalOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
             if (Application.platform != RuntimePlatform.Android && Application.platform != RuntimePlatform.WebGLPlayer) LocalURL = "file://" + LocalURL;
         }
@@ -111,7 +111,7 @@ namespace BundleSystem
             s_AssetBundles.Clear();
             s_LocalBundles.Clear();
 
-            var manifestReq = UnityWebRequest.Get(Path.Combine(LocalURL, AssetbundleBuildSettings.ManifestFileName));
+            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(LocalURL, AssetbundleBuildSettings.ManifestFileName));
             yield return manifestReq.SendWebRequest();
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
@@ -144,7 +144,7 @@ namespace BundleSystem
                     !Caching.IsVersionCached(cachedBundleInfo.AsCached); //is not cached no unusable.
 
                 bundleInfoToLoad = useLocalBundle ? localBundleInfo : cachedBundleInfo;
-                var loadPath = Path.Combine(LocalURL, bundleInfoToLoad.BundleName);
+                var loadPath = Utility.CombinePath(LocalURL, bundleInfoToLoad.BundleName);
 
                 var bundleReq = UnityWebRequestAssetBundle.GetAssetBundle(loadPath, bundleInfoToLoad.Hash);
                 var bundleOp = bundleReq.SendWebRequest();
@@ -172,10 +172,10 @@ namespace BundleSystem
                 s_LocalBundles.Add(localBundleInfo.BundleName, localBundleInfo.Hash);
             }
 
-            RemoteURL = Path.Combine(localManifest.RemoteURL, localManifest.BuildTarget).Replace('\\', '/');
+            RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
-                RemoteURL = "file://" + Path.Combine(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+                RemoteURL = "file://" + Utility.CombinePath(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
@@ -216,7 +216,7 @@ namespace BundleSystem
             }
 #endif
 
-            var manifestReq = UnityWebRequest.Get(Path.Combine(RemoteURL, AssetbundleBuildSettings.ManifestFileName).Replace('\\', '/'));
+            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(RemoteURL, AssetbundleBuildSettings.ManifestFileName).Replace('\\', '/'));
             yield return manifestReq.SendWebRequest();
 
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
@@ -314,7 +314,7 @@ namespace BundleSystem
                 var isCached = Caching.IsVersionCached(bundleInfo.AsCached);
                 result.SetCachedBundle(isCached);
 
-                var loadURL = islocalBundle ? Path.Combine(LocalURL, bundleInfo.BundleName) : Path.Combine(RemoteURL, bundleInfo.BundleName).Replace('\\', '/');
+                var loadURL = islocalBundle ? Utility.CombinePath(LocalURL, bundleInfo.BundleName) : Utility.CombinePath(RemoteURL, bundleInfo.BundleName);
                 if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {islocalBundle}, isCached {isCached}");
                 LoadedBundle previousBundle;
 
