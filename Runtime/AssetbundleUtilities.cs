@@ -87,7 +87,7 @@ namespace BundleSystem
             var sceneInfo = UnityEditor.Build.Content.ContentBuildInterface.CalculatePlayerDependenciesForScene(scenePath, settings, usageTags, depsCache);
 #else
             Directory.CreateDirectory(kTempBuildPath);
-            var ceneInfo = UnityEditor.Build.Content.ContentBuildInterface.PrepareScene(scenePath, settings, usageTags, depsCache, outputFolder);
+            var sceneInfo = UnityEditor.Build.Content.ContentBuildInterface.PrepareScene(scenePath, settings, usageTags, depsCache, kTempBuildPath);
 #endif
 
             //this is needed as calculate function actumatically pops up progress bar
