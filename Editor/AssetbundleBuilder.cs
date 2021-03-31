@@ -62,6 +62,18 @@ namespace BundleSystem
 
         public static void WriteExpectedSharedBundles(AssetbundleBuildSettings settings)
         {
+            if(!Application.isBatchMode)
+            {
+                //have to ask save current scene
+                var saved = UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+
+                if(!saved) 
+                {
+                    EditorUtility.DisplayDialog("Failed!", $"User Canceled", "Confirm");
+                    return;
+                }
+            }
+            
             var bundleList = GetAssetBundlesList(settings);
             var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
@@ -100,12 +112,24 @@ namespace BundleSystem
 
         public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
         {
+            if(!Application.isBatchMode)
+            {
+                //have to ask save current scene
+                var saved = UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+
+                if(!saved) 
+                {
+                    EditorUtility.DisplayDialog("Build Failed!", $"User Canceled", "Confirm");
+                    return;
+                }
+            }
+
             var bundleList = GetAssetBundlesList(settings);
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
-            var outputPath = Path.Combine(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
+            var outputPath = Utility.CombinePath(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
 
 
             //generate sharedBundle if needed, and pre generate dependency
@@ -245,7 +269,7 @@ namespace BundleSystem
             manifest.BuildTime = DateTime.UtcNow.Ticks;
             manifest.RemoteURL = remoteURL;
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
+            File.WriteAllText(Utility.CombinePath(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
         static void WriteSharedBundleLog(string path, AssetDependencyTree.ProcessResult treeResult)
@@ -273,7 +297,7 @@ namespace BundleSystem
             }
 
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, LogExpectedSharedBundleFileName), sb.ToString());
+            File.WriteAllText(Utility.CombinePath(path, LogExpectedSharedBundleFileName), sb.ToString());
         }
 
 
@@ -318,7 +342,7 @@ namespace BundleSystem
             }
 
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, LogFileName), sb.ToString());
+            File.WriteAllText(Utility.CombinePath(path, LogFileName), sb.ToString());
         }
     }
 }

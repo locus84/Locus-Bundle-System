@@ -19,7 +19,7 @@ namespace BundleSystem
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
 
 
-            var localBundleSourcePath = Path.Combine(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
+            var localBundleSourcePath = Utility.CombinePath(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
             if(!Directory.Exists(localBundleSourcePath))
             {
                 if(Application.isBatchMode)
@@ -35,7 +35,7 @@ namespace BundleSystem
                 }
             }
 
-            FileUtil.CopyFileOrDirectory(Path.Combine(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()), AssetbundleBuildSettings.LocalBundleRuntimePath);
+            FileUtil.CopyFileOrDirectory(Utility.CombinePath(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()), AssetbundleBuildSettings.LocalBundleRuntimePath);
             AssetDatabase.Refresh();
         }
 

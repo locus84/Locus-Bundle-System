@@ -13,8 +13,9 @@ namespace BundleSystem
     /// utilities can be used in runtime but in editor
     /// or just in editor scripts
     /// </summary>
-    public static class Utility
+    public static partial class Utility
     {
+        public const string kTempBuildPath = "Temp/BundleContentBuildData";
         public static bool IsAssetCanBundled(string assetPath)
         {
             var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
@@ -31,11 +32,11 @@ namespace BundleSystem
             for (int i = 0; i < files.Length; i++)
             {
                 var currentFile = files[i];
-                var unityPath = Path.Combine(folderPath, currentFile.Name).Replace('\\', '/');
+                var unityPath = Utility.CombinePath(folderPath, currentFile.Name);
                 if (!IsAssetCanBundled(unityPath)) continue;
 
                 resultAssetPath.Add(unityPath);
-                resultLoadPath.Add(Path.Combine(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)).Replace('\\', '/'));
+                resultLoadPath.Add(Utility.CombinePath(dirPrefix, Path.GetFileNameWithoutExtension(unityPath)));
             }
 
             if (includeSubdir)
@@ -43,7 +44,7 @@ namespace BundleSystem
                 foreach (var subDir in dir.GetDirectories())
                 {
                     var subdirName = $"{folderPath}/{subDir.Name}";
-                    GetFilesInDirectory(Path.Combine(dirPrefix, subDir.Name).Replace('\\', '/'), resultAssetPath, resultLoadPath, subdirName, includeSubdir);
+                    GetFilesInDirectory(Utility.CombinePath(dirPrefix, subDir.Name), resultAssetPath, resultLoadPath, subdirName, includeSubdir);
                 }
             }
         }
@@ -82,7 +83,12 @@ namespace BundleSystem
             var depsCache = new UnityEditor.Build.Content.BuildUsageCache();
 
             //extract deps form scriptable build pipeline
+#if UNITY_2019_3_OR_NEWER
             var sceneInfo = UnityEditor.Build.Content.ContentBuildInterface.CalculatePlayerDependenciesForScene(scenePath, settings, usageTags, depsCache);
+#else
+            Directory.CreateDirectory(kTempBuildPath);
+            var sceneInfo = UnityEditor.Build.Content.ContentBuildInterface.PrepareScene(scenePath, settings, usageTags, depsCache, kTempBuildPath);
+#endif
 
             //this is needed as calculate function actumatically pops up progress bar
             EditorUtility.ClearProgressBar();
@@ -117,4 +123,21 @@ namespace BundleSystem
         }
     }
 #endif
+
+    //Runtime usable Utility
+    public static partial class Utility
+    {
+        public static string CombinePath(params string[] args)
+        {
+            var sb = new System.Text.StringBuilder();
+            for(int i = 0; i < args.Length; i++)
+            {
+                //skip empty
+                if(string.IsNullOrEmpty(args[i])) continue;
+                if(sb.Length > 0) sb.Append('/');
+                sb.Append(args[i]);
+            }
+            return sb.ToString();
+        }
+    }
 }
