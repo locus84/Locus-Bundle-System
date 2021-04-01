@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
@@ -33,6 +32,7 @@ namespace BundleSystem
         {
             public CachedAssetBundle AsCached => new CachedAssetBundle(BundleName, Hash);
             public string BundleName;
+            public bool IsLocal;
 
             [SerializeField]
             string m_HashString;

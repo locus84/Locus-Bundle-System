@@ -16,7 +16,7 @@ namespace BundleSystem
             public List<AssetBundleBuild> SharedBundles;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles)
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, List<string> exceptions)
         {
             var context = new Context();
             var rootNodesToProcess = new List<RootNode>();
@@ -25,18 +25,23 @@ namespace BundleSystem
             //if not, there might be false positive shared bundle that already exist in bundle defines
             foreach(var bundle in definedBundles)
             {
+                var allowCollect = !exceptions.Contains(bundle.assetBundleName);
                 var depsHash = new HashSet<string>();
                 context.DependencyDic.Add(bundle.assetBundleName, depsHash);
                 foreach(var asset in bundle.assetNames)
                 {
-                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false);
+                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false, allowCollect);
                     context.RootNodes.Add(asset, rootNode);
                     rootNodesToProcess.Add(rootNode);
                 }
             }
 
             //actually analize and create shared bundles
-            foreach (var node in rootNodesToProcess) node.CollectNodes(context);
+            foreach (var node in rootNodesToProcess)
+            {
+                if(!node.AllowCollect) continue;
+                node.CollectNodes(context);
+            } 
 
             var resultList = new List<AssetBundleBuild>();
             //convert found shared node proper struct
@@ -68,12 +73,15 @@ namespace BundleSystem
         {
             public string BundleName { get; private set; }
             public bool IsShared { get; private set; }
+            public bool AllowCollect { get; private set; }
             public HashSet<string> ReferencedBundleNames;
 
-            public RootNode(string path, string bundleName, HashSet<string> deps, bool isShared) : base(path, null)
+
+            public RootNode(string path, string bundleName, HashSet<string> deps, bool isShared, bool allowCollect) : base(path, null)
             {
                 IsShared = isShared;
                 BundleName = bundleName;
+                AllowCollect = allowCollect;
                 Root = this;
                 ReferencedBundleNames = deps;
             }
@@ -129,7 +137,7 @@ namespace BundleSystem
                             var newName = $"Shared_{AssetDatabase.AssetPathToGUID(child)}";
                             var depsHash = new HashSet<string>();
                             context.DependencyDic.Add(newName, depsHash);
-                            var newRoot = new RootNode(child, newName, depsHash, true);
+                            var newRoot = new RootNode(child, newName, depsHash, true, true);
 
                             //add deps
                             node.Root.ReferencedBundleNames.Add(newName);

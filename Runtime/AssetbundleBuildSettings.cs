@@ -85,26 +85,16 @@ namespace BundleSystem
 #endif
         public const string ManifestFileName = "Manifest.json";
         public static string LocalBundleRuntimePath => Application.streamingAssetsPath + "/localbundles/";
-        public string LocalOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_LocalOutputFolder;
-        public string RemoteOutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_RemoteOutputFolder;
+        public string OutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + m_OutputFolder;
 
         public List<BundleSetting> BundleSettings = new List<BundleSetting>();
 
-        [Tooltip("Auto create shared bundles to remove duplicated assets")]
-        public bool AutoCreateSharedBundles = true;
-
         /// <summary>
         /// output folder inside project
         /// </summary>
         [SerializeField]
-        [Tooltip("Remote bundle build output folder")]
-        string m_RemoteOutputFolder = "RemoteBundles";
-        /// <summary>
-        /// output folder inside project
-        /// </summary>
-        [SerializeField]
-        [Tooltip("Local bundle build output folder")]
-        string m_LocalOutputFolder = "LocalBundles";
+        [Tooltip("Assetbundle build output folder")]
+        string m_OutputFolder = "AssetBundles";
 
         [Tooltip("Remote URL for downloading remote bundles")]
         public string RemoteURL = "http://localhost/";
@@ -143,6 +133,8 @@ namespace BundleSystem
         public bool IncludeSubfolder = false;
         [Tooltip("Works only for remote bundle, true for LMZA, false for LZ4")]
         public bool CompressBundle = true;
+        [Tooltip("Automatically generate shared bundles")]
+        public bool AutoSharedBundle = true;
     }
 }
 

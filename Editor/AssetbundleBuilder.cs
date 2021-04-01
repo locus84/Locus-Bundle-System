@@ -4,18 +4,11 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEditor.Build.Pipeline.WriteTypes;
 using UnityEngine;
 using System;
 
 namespace BundleSystem
 {
-    public enum BuildType
-    {
-        Remote,
-        Local
-    }
-
     /// <summary>
     /// class that contains actual build functionalities
     /// </summary>
@@ -27,37 +20,28 @@ namespace BundleSystem
         class CustomBuildParameters : BundleBuildParameters
         {
             public AssetbundleBuildSettings CurrentSettings;
-            public BuildType CurrentBuildType;
-            public Dictionary<string, HashSet<string>> DependencyDic;
 
             public CustomBuildParameters(AssetbundleBuildSettings settings, 
                 BuildTarget target, 
                 BuildTargetGroup group, 
-                string outputFolder,
-                Dictionary<string, HashSet<string>> deps,
-                BuildType  buildType) : base(target, group, outputFolder)
+                string outputFolder) : base(target, group, outputFolder)
             {
                 CurrentSettings = settings;
-                CurrentBuildType = buildType;
-                DependencyDic = deps;
             }
 
             // Override the GetCompressionForIdentifier method with new logic
             public override BuildCompression GetCompressionForIdentifier(string identifier)
             {
-                //local bundles are always lz4 for faster initializing
-                if (CurrentBuildType == BuildType.Local) return BuildCompression.LZ4;
-
                 //find user set compression method
                 var found = CurrentSettings.BundleSettings.FirstOrDefault(setting => setting.BundleName == identifier);
                 return found == null || !found.CompressBundle ? BuildCompression.LZ4 : BuildCompression.LZMA;
             }
         }
 
-        public static void BuildAssetBundles(BuildType buildType)
+        public static void BuildAssetBundles()
         {
             var editorInstance = AssetbundleBuildSettings.EditorInstance;
-            BuildAssetBundles(editorInstance, buildType);
+            BuildAssetBundles(editorInstance);
         }
 
         public static void WriteExpectedSharedBundles(AssetbundleBuildSettings settings)
@@ -74,8 +58,8 @@ namespace BundleSystem
                 }
             }
             
-            var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var bundleList = GetAssetBundlesList(settings, out var sharedException);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, sharedException);
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
             {
@@ -83,9 +67,10 @@ namespace BundleSystem
             }
         }
 
-        public static List<AssetBundleBuild> GetAssetBundlesList(AssetbundleBuildSettings settings)
+        public static List<AssetBundleBuild> GetAssetBundlesList(AssetbundleBuildSettings settings, out List<string> sharedException)
         {
             var bundleList = new List<AssetBundleBuild>();
+            sharedException = new List<string>();
 
             foreach (var setting in settings.BundleSettings)
             {
@@ -105,12 +90,14 @@ namespace BundleSystem
                 newBundle.assetNames = assetPathes.ToArray();
                 newBundle.addressableNames = loadPathes.ToArray();
                 bundleList.Add(newBundle);
+
+                if(!setting.AutoSharedBundle) sharedException.Add(setting.BundleName);
             }
 
             return bundleList;
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSettings settings, BuildType buildType)
+        public static void BuildAssetBundles(AssetbundleBuildSettings settings)
         {
             if(!Application.isBatchMode)
             {
@@ -124,23 +111,18 @@ namespace BundleSystem
                 }
             }
 
-            var bundleList = GetAssetBundlesList(settings);
+            var bundleList = GetAssetBundlesList(settings, out var sharedException);
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
-            var outputPath = Utility.CombinePath(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
-
-
+            var outputPath = Utility.CombinePath(settings.OutputPath, buildTarget.ToString());
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, sharedException);
 
-            if (settings.AutoCreateSharedBundles)
-            {
-                bundleList.AddRange(treeResult.SharedBundles);
-            }
+            bundleList.AddRange(treeResult.SharedBundles);
 
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
+            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -150,28 +132,14 @@ namespace BundleSystem
                 buildParams.CacheServerPort = settings.CacheServerPort;
             }
 
-            ContentPipeline.BuildCallbacks.PostPackingCallback += PostPackingForSelectiveBuild;
             var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(bundleList.ToArray()), out var results);
-            ContentPipeline.BuildCallbacks.PostPackingCallback -= PostPackingForSelectiveBuild;
-            
 
             if (returnCode == ReturnCode.Success)
             {
-                //only remote bundle build generates link.xml
-                switch(buildType)
-                {
-                    case BuildType.Local:
-                        WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
-                        WriteLogFile(outputPath, results);
-                        if(!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", "Local bundle build succeeded!", "Confirm");
-                        break;
-                    case BuildType.Remote:
-                        WriteManifestFile(outputPath, results, buildTarget, settings.RemoteURL);
-                        WriteLogFile(outputPath, results);
-                        var linkPath = TypeLinkerGenerator.Generate(settings, results);
-                        if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
-                        break;
-                }
+                WriteManifestFile(outputPath, settings, results, buildTarget, settings.RemoteURL);
+                WriteLogFile(outputPath, results);
+                var linkPath = TypeLinkerGenerator.Generate(settings, results);
+                if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
             }
             else
             {
@@ -180,71 +148,10 @@ namespace BundleSystem
             }
         }
 
-        private static ReturnCode PostPackingForSelectiveBuild(IBuildParameters buildParams, IDependencyData dependencyData, IWriteData writeData)
-        {
-            var customBuildParams = buildParams as CustomBuildParameters;
-            var depsDic = customBuildParams.DependencyDic;
-
-            List<string> includedBundles;
-
-            if(customBuildParams.CurrentBuildType == BuildType.Local)
-            {
-                //deps includes every local dependencies recursively
-                includedBundles = customBuildParams.CurrentSettings.BundleSettings
-                    .Where(setting => setting.IncludedInPlayer)
-                    .Select(setting => setting.BundleName)
-                    .SelectMany(bundleName => Utility.CollectBundleDependencies(depsDic, bundleName, true))
-                    .Distinct()
-                    .ToList();
-            }
-            //if not local build, we include everything
-            else
-            {
-                includedBundles = depsDic.Keys.ToList();
-            }
-
-            //quick exit 
-            if (includedBundles == null || includedBundles.Count == 0)
-            {
-                Debug.Log("Nothing to build");
-                writeData.WriteOperations.Clear();
-                return ReturnCode.Success;
-            }
-
-            for (int i = writeData.WriteOperations.Count - 1; i >= 0; --i)
-            {
-                string bundleName;
-                switch (writeData.WriteOperations[i])
-                {
-                    case SceneBundleWriteOperation sceneOperation:
-                        bundleName = sceneOperation.Info.bundleName;
-                        break;
-                    case SceneDataWriteOperation sceneDataOperation:
-                        var bundleWriteData = writeData as IBundleWriteData;
-                        bundleName = bundleWriteData.FileToBundle[sceneDataOperation.Command.internalName];
-                        break;
-                    case AssetBundleWriteOperation assetBundleOperation:
-                        bundleName = assetBundleOperation.Info.bundleName;
-                        break;
-                    default:
-                        Debug.LogError("Unexpected write operation");
-                        return ReturnCode.Error;
-                }
-
-                // if we do not want to build that bundle, remove the write operation from the list
-                if (!includedBundles.Contains(bundleName))
-                {
-                    writeData.WriteOperations.RemoveAt(i);
-                }
-            }
-
-            return ReturnCode.Success;
-        }
-
         /// <summary>
         /// write manifest into target path.
         /// </summary>
-        static void WriteManifestFile(string path, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
+        static void WriteManifestFile(string path, AssetbundleBuildSettings settings, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
         {
             var manifest = new AssetbundleBuildManifest();
             manifest.BuildTarget = target.ToString();
@@ -252,12 +159,20 @@ namespace BundleSystem
             //we use unity provided dependency result for final check
             var deps = bundleResults.BundleInfos.ToDictionary(kv => kv.Key, kv => kv.Value.Dependencies.ToList());
 
+            var locals = settings.BundleSettings
+                .Where(setting => setting.IncludedInPlayer)
+                .Select(setting => setting.BundleName)
+                .SelectMany(bundleName => Utility.CollectBundleDependencies(deps, bundleName, true))
+                .Distinct()
+                .ToList();
+
             foreach (var result in bundleResults.BundleInfos)
             {
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 bundleInfo.Dependencies = Utility.CollectBundleDependencies(deps, result.Key);
                 bundleInfo.Hash = result.Value.Hash;
+                bundleInfo.IsLocal = locals.Contains(result.Key);
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
                 manifest.BundleInfos.Add(bundleInfo);
             }

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using UnityEngine.Networking;
-using System.IO;
+using System.Linq;
 
 namespace BundleSystem
 {
@@ -68,7 +68,7 @@ namespace BundleSystem
             LocalURL = AssetbundleBuildSettings.LocalBundleRuntimePath;
 #if UNITY_EDITOR
             SetupAssetdatabaseUsage();
-            LocalURL = Utility.CombinePath(s_EditorBuildSettings.LocalOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+            LocalURL = Utility.CombinePath(s_EditorBuildSettings.OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
             if (Application.platform != RuntimePlatform.Android && Application.platform != RuntimePlatform.WebGLPlayer) LocalURL = "file://" + LocalURL;
         }
@@ -129,14 +129,15 @@ namespace BundleSystem
             var cacheIsValid = AssetbundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out var cachedManifest) 
                 && cachedManifest.BuildTime > localManifest.BuildTime;
 
-            result.SetIndexLength(localManifest.BundleInfos.Count);
-            for(int i = 0; i < localManifest.BundleInfos.Count; i++)
+            var localBundleInfos = localManifest.BundleInfos.Where(bi => bi.IsLocal).ToArray();
+            result.SetIndexLength(localBundleInfos.Length);
+            for(int i = 0; i < localBundleInfos.Length; i++)
             {
                 result.SetCurrentIndex(i);
                 result.SetCachedBundle(true);
                 AssetbundleBuildManifest.BundleInfo bundleInfoToLoad;
                 AssetbundleBuildManifest.BundleInfo cachedBundleInfo = default;
-                var localBundleInfo = localManifest.BundleInfos[i];
+                var localBundleInfo = localBundleInfos[i];
 
                 bool useLocalBundle =
                     !cacheIsValid || //cache is not valid or...
@@ -175,7 +176,7 @@ namespace BundleSystem
             RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
-                RemoteURL = "file://" + Utility.CombinePath(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+                RemoteURL = "file://" + Utility.CombinePath(s_EditorBuildSettings.OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 #endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");

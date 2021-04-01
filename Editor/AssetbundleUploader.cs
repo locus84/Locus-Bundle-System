@@ -15,7 +15,7 @@ namespace BundleSystem
                 var buildTargetString = EditorUserBuildSettings.activeBuildTarget.ToString();
                 var credential = new NetworkCredential(settings.FtpUserName, settings.FtpUserPass);
                 var uploadRootPath = Utility.CombinePath(settings.FtpHost, buildTargetString);
-                var dirInfo = new DirectoryInfo(Utility.CombinePath(settings.RemoteOutputPath, buildTargetString));
+                var dirInfo = new DirectoryInfo(Utility.CombinePath(settings.OutputPath, buildTargetString));
                 var files = dirInfo.GetFiles();
                 var progress = 0f;
                 var progressStep = 1f / files.Length;

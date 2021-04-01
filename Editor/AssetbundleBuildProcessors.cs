@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Linq;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
@@ -18,8 +19,8 @@ namespace BundleSystem
             if (Directory.Exists(AssetbundleBuildSettings.LocalBundleRuntimePath)) Directory.Delete(AssetbundleBuildSettings.LocalBundleRuntimePath, true);
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
 
-
-            var localBundleSourcePath = Utility.CombinePath(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
+            //there should be a local bundle
+            var localBundleSourcePath = Utility.CombinePath(settings.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
             if(!Directory.Exists(localBundleSourcePath))
             {
                 if(Application.isBatchMode)
@@ -29,13 +30,25 @@ namespace BundleSystem
                 }
                 else
                 {
-                    var buildNow = EditorUtility.DisplayDialog("LocusBundleSystem", "Warning - Missing built local bundle directory, would you like to build now?", "Yes", "Not now");
+                    var buildNow = EditorUtility.DisplayDialog("LocusBundleSystem", "Warning - Missing built bundle directory, would you like to build now?", "Yes", "Not now");
                     if(!buildNow) return; //user declined
-                    AssetbundleBuilder.BuildAssetBundles(BuildType.Local);
+                    AssetbundleBuilder.BuildAssetBundles(settings);
                 }
             }
 
-            FileUtil.CopyFileOrDirectory(Utility.CombinePath(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()), AssetbundleBuildSettings.LocalBundleRuntimePath);
+            //load manifest and make local bundle list
+            var manifest = JsonUtility.FromJson<AssetbundleBuildManifest>(File.ReadAllText(Utility.CombinePath(localBundleSourcePath, AssetbundleBuildSettings.ManifestFileName)));
+            var localBundleNames = manifest.BundleInfos.Where(bi => bi.IsLocal).Select(bi => bi.BundleName).ToList();
+
+            Directory.CreateDirectory(AssetbundleBuildSettings.LocalBundleRuntimePath);
+
+            //copy only manifest and local bundles                        
+            foreach(var file in new DirectoryInfo(localBundleSourcePath).GetFiles())
+            {
+                if(!localBundleNames.Contains(file.Name) && AssetbundleBuildSettings.ManifestFileName != file.Name) continue;
+                FileUtil.CopyFileOrDirectory(file.FullName, Utility.CombinePath(AssetbundleBuildSettings.LocalBundleRuntimePath, file.Name));
+            }
+
             AssetDatabase.Refresh();
         }
 

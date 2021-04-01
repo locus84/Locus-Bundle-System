@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
-using System.Linq;
-using UnityEditor.Build.Pipeline.Utilities;
-using System.IO;
 
 namespace BundleSystem
 {
@@ -12,9 +9,7 @@ namespace BundleSystem
     public class AssetbundleBuildSettingsInspector : Editor
     {
         SerializedProperty m_SettingsProperty;
-        SerializedProperty m_AutoCreateSharedBundles;
-        SerializedProperty m_RemoteOutputPath;
-        SerializedProperty m_LocalOutputPath;
+        SerializedProperty m_OutputPath;
         SerializedProperty m_EmulateBundle;
         SerializedProperty m_EmulateUseRemoteFolder;
         SerializedProperty m_CleanCache;
@@ -41,9 +36,7 @@ namespace BundleSystem
         private void OnEnable()
         {
             m_SettingsProperty = serializedObject.FindProperty("BundleSettings");
-            m_AutoCreateSharedBundles = serializedObject.FindProperty("AutoCreateSharedBundles");
-            m_RemoteOutputPath = serializedObject.FindProperty("m_RemoteOutputFolder");
-            m_LocalOutputPath = serializedObject.FindProperty("m_LocalOutputFolder");
+            m_OutputPath = serializedObject.FindProperty("m_OutputFolder");
             m_EmulateBundle = serializedObject.FindProperty("EmulateInEditor");
             m_EmulateUseRemoteFolder = serializedObject.FindProperty("EmulateWithoutRemoteURL");
             m_CleanCache = serializedObject.FindProperty("CleanCacheInEditor");
@@ -98,7 +91,6 @@ namespace BundleSystem
             }
 
             GUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(m_AutoCreateSharedBundles);
             if (allowBuild && GUILayout.Button("Get Expected Sharedbundle List"))
             {
                 AssetbundleBuilder.WriteExpectedSharedBundles(settings);
@@ -107,12 +99,8 @@ namespace BundleSystem
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(m_RemoteOutputPath);
-            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Utility.CombinePath(settings.RemoteOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(m_LocalOutputPath);
-            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Utility.CombinePath(settings.LocalOutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
+            EditorGUILayout.PropertyField(m_OutputPath);
+            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Utility.CombinePath(settings.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
             GUILayout.EndHorizontal();
             EditorGUILayout.PropertyField(m_RemoteURL);
             EditorGUILayout.Space();
@@ -138,8 +126,7 @@ namespace BundleSystem
                 m_FtpPass.stringValue = EditorGUILayout.PasswordField("Ftp Password", m_FtpPass.stringValue);
             }
 
-            GUILayout.Label($"Local Output folder : { settings.LocalOutputPath }");
-            GUILayout.Label($"Remote Output folder : { settings.RemoteOutputPath }");
+            GUILayout.Label($"Output folder : { settings.OutputPath }");
 
             serializedObject.ApplyModifiedProperties();
 
@@ -148,15 +135,9 @@ namespace BundleSystem
             if(AssetbundleBuildSettings.EditorInstance == settings)
             {
                 EditorGUILayout.BeginHorizontal();
-                if (allowBuild && GUILayout.Button("Build Remote"))
+                if (allowBuild && GUILayout.Button("Build"))
                 {
-                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Remote);
-                    GUIUtility.ExitGUI();
-                }
-
-                if (allowBuild && GUILayout.Button("Build Local"))
-                {
-                    AssetbundleBuilder.BuildAssetBundles(settings, BuildType.Local);
+                    AssetbundleBuilder.BuildAssetBundles(settings);
                     GUIUtility.ExitGUI();
                 }
 
