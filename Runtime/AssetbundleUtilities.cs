@@ -129,15 +129,9 @@ namespace BundleSystem
     {
         public static string CombinePath(params string[] args)
         {
-            var sb = new System.Text.StringBuilder();
-            for(int i = 0; i < args.Length; i++)
-            {
-                //skip empty
-                if(string.IsNullOrEmpty(args[i])) continue;
-                if(sb.Length > 0) sb.Append('/');
-                sb.Append(args[i]);
-            }
-            return sb.ToString();
+            var combined = Path.Combine(args);
+            if(Path.DirectorySeparatorChar == '\\') combined = combined.Replace('\\', '/');
+            return combined;
         }
     }
 }
