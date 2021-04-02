@@ -170,6 +170,7 @@ namespace BundleSystem
                         WriteLogFile(outputPath, results);
                         var linkPath = TypeLinkerGenerator.Generate(settings, results);
                         if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
+                        if(settings.AutoUploadS3) LocusAssetbundleUploaderExtension.UploadToS3Bucket(settings);
                         break;
                 }
             }

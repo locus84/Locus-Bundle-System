@@ -22,6 +22,7 @@ namespace BundleSystem
         ReorderableList list;
 
         SerializedProperty m_ForceRebuld;
+        SerializedProperty m_AutoUploadS3;
         SerializedProperty m_UseCacheServer;
         SerializedProperty m_CacheServerHost;
         SerializedProperty m_CacheServerPort;
@@ -50,6 +51,7 @@ namespace BundleSystem
             m_RemoteURL = serializedObject.FindProperty("RemoteURL");
 
             m_ForceRebuld = serializedObject.FindProperty("ForceRebuild");
+            m_AutoUploadS3 = serializedObject.FindProperty("AutoUploadS3");
             m_UseCacheServer = serializedObject.FindProperty("UseCacheServer");
             m_CacheServerHost = serializedObject.FindProperty("CacheServerHost");
             m_CacheServerPort = serializedObject.FindProperty("CacheServerPort");
@@ -121,6 +123,8 @@ namespace BundleSystem
             EditorGUILayout.PropertyField(m_CleanCache);
             EditorGUILayout.PropertyField(m_ForceRebuld);
             EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(m_AutoUploadS3);
+            EditorGUILayout.Space();
 
             EditorGUILayout.PropertyField(m_UseCacheServer);
             if(m_UseCacheServer.boolValue)
@@ -131,6 +135,7 @@ namespace BundleSystem
 
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(m_UseFtp);
+            EditorGUILayout.Space();
             if(m_UseFtp.boolValue)
             {
                 EditorGUILayout.PropertyField(m_FtpHost);
@@ -168,6 +173,13 @@ namespace BundleSystem
                 }
                 EditorGUI.EndDisabledGroup();
                 EditorGUILayout.EndHorizontal();
+                EditorGUILayout.BeginVertical();
+                if (GUILayout.Button("Upload to S3"))
+                {
+                    LocusAssetbundleUploaderExtension.UploadToS3Bucket(settings);
+                    GUIUtility.ExitGUI();
+                }
+                EditorGUILayout.EndVertical();
             }
             else
             {
