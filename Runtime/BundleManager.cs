@@ -15,6 +15,8 @@ namespace BundleSystem
         //instance is almost only for coroutines
         private static BundleManagerHelper s_Helper { get; set; }
         private static DebugGuiHelper s_DebugGUI { get; set; }
+        public const string ManifestFileName = "Manifest.json";
+        public static string LocalBundleRuntimePath => Utility.CombinePath(Application.streamingAssetsPath, "localbundles");
 
         class LoadedBundle
         {
@@ -45,7 +47,17 @@ namespace BundleSystem
 
 #if UNITY_EDITOR
         public static bool UseAssetDatabase { get; private set; } = true;
+        public static void SetEditorDatabase(EditorDatabase map) => s_EditorDatabase = map;
+        private static EditorDatabase s_EditorDatabase;
+        private static void EnsureAssetDatabase()
+        {
+            if(!Application.isPlaying && s_EditorDatabase == null) 
+            {
+                throw new System.Exception("EditorDatabase is null, try call SetEditorDatabase before calling actual api in non-play mode");
+            }
+        }
 #endif
+
         public static bool Initialized { get; private set; } = false;
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
@@ -65,12 +77,6 @@ namespace BundleSystem
             s_Helper = managerGo.AddComponent<BundleManagerHelper>();
             s_DebugGUI = managerGo.AddComponent<DebugGuiHelper>();
             s_DebugGUI.enabled = s_ShowDebugGUI;
-            LocalURL = AssetbundleBuildSettings.LocalBundleRuntimePath;
-#if UNITY_EDITOR
-            SetupAssetdatabaseUsage();
-            LocalURL = Utility.CombinePath(s_EditorBuildSettings.OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
-#endif
-            if (Application.platform != RuntimePlatform.Android && Application.platform != RuntimePlatform.WebGLPlayer) LocalURL = "file://" + LocalURL;
         }
 
         static void CollectSceneNames(LoadedBundle loadedBundle)
@@ -101,17 +107,38 @@ namespace BundleSystem
                 yield break;
             }
 
+#if UNITY_EDITOR
+            if (s_EditorDatabase.UseAssetDatabase)
+            {
+                UseAssetDatabase = true;
+                Initialized = true;
+                yield break; //use asset database
+            }
+            if (s_EditorDatabase.CleanCache) Caching.ClearCache();
+            LocalURL = s_EditorDatabase.OutputPath;
+#else
+            LocalURL = LocalBundleRuntimePath;
+#endif
+
+            //platform specific path setting
+            if (Application.platform != RuntimePlatform.Android && 
+                Application.platform != RuntimePlatform.WebGLPlayer) 
+            {
+                LocalURL = "file://" + LocalURL;
+            }
+
             AutoReloadBundle = autoReloadBundle;
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
             foreach (var kv in s_AssetBundles)
                 kv.Value.Bundle.Unload(false);
+
             s_SceneNames.Clear();
             s_AssetBundles.Clear();
             s_LocalBundles.Clear();
 
-            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(LocalURL, AssetbundleBuildSettings.ManifestFileName));
+            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(LocalURL, ManifestFileName));
             yield return manifestReq.SendWebRequest();
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
@@ -175,8 +202,8 @@ namespace BundleSystem
 
             RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
-            if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
-                RemoteURL = "file://" + Utility.CombinePath(s_EditorBuildSettings.OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
+            if (s_EditorDatabase.UseOuputAsRemote)
+                RemoteURL = "file://" + s_EditorDatabase.OutputPath;
 #endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
@@ -217,7 +244,7 @@ namespace BundleSystem
             }
 #endif
 
-            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(RemoteURL, AssetbundleBuildSettings.ManifestFileName).Replace('\\', '/'));
+            var manifestReq = UnityWebRequest.Get(Utility.CombinePath(RemoteURL, ManifestFileName));
             yield return manifestReq.SendWebRequest();
 
             if (manifestReq.isHttpError || manifestReq.isNetworkError)

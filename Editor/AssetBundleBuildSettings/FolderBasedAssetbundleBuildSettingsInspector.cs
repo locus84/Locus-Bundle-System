@@ -5,8 +5,8 @@ using UnityEditorInternal;
 namespace BundleSystem
 {
     [DisallowMultipleComponent]
-    [CustomEditor(typeof(AssetbundleBuildSettings))]
-    public class AssetbundleBuildSettingsInspector : Editor
+    [CustomEditor(typeof(FolderBasedAssetbundleBuildSettings))]
+    public class FolderBasedAssetbundleBuildSettingsInspector : Editor
     {
         SerializedProperty m_SettingsProperty;
         SerializedProperty m_OutputPath;
@@ -26,17 +26,10 @@ namespace BundleSystem
         SerializedProperty m_FtpUser;
         SerializedProperty m_FtpPass;
 
-        // Add menu named "My Window" to the Window menu
-        [MenuItem("Window/Asset Management/Select Active Assetbundle Build Settings")]
-        static void SelectActiveSettings()
-        {
-            Selection.activeObject = AssetbundleBuildSettings.EditorInstance;
-        }
-
         private void OnEnable()
         {
-            m_SettingsProperty = serializedObject.FindProperty("BundleSettings");
-            m_OutputPath = serializedObject.FindProperty("m_OutputFolder");
+            m_SettingsProperty = serializedObject.FindProperty("FolderSettings");
+            m_OutputPath = serializedObject.FindProperty("OutputFolder");
             m_EmulateBundle = serializedObject.FindProperty("EmulateInEditor");
             m_EmulateUseRemoteFolder = serializedObject.FindProperty("EmulateWithoutRemoteURL");
             m_CleanCache = serializedObject.FindProperty("CleanCacheInEditor");
@@ -52,7 +45,7 @@ namespace BundleSystem
             m_FtpUser = serializedObject.FindProperty("FtpUserName");
             m_FtpPass = serializedObject.FindProperty("FtpUserPass");
 
-            var settings = target as AssetbundleBuildSettings;
+            var settings = target as FolderBasedAssetbundleBuildSettings;
 
             list = new ReorderableList(serializedObject, m_SettingsProperty, true, true, true, true)
             {
@@ -72,7 +65,7 @@ namespace BundleSystem
                     // get outer element
                     var element = m_SettingsProperty.GetArrayElementAtIndex(index);
                     rect.xMin += 10;
-                    EditorGUI.PropertyField(rect, element, new GUIContent(settings.BundleSettings[index].BundleName), element.isExpanded);
+                    EditorGUI.PropertyField(rect, element, new GUIContent(settings.FolderSettings[index].BundleName), element.isExpanded);
                 }
             };
         }
@@ -80,7 +73,7 @@ namespace BundleSystem
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            var settings = target as AssetbundleBuildSettings;
+            var settings = target as FolderBasedAssetbundleBuildSettings;
 
             list.DoLayoutList();
             bool allowBuild = true;
@@ -89,14 +82,6 @@ namespace BundleSystem
                 GUILayout.Label("Duplicate or Empty BundleName detected");
                 allowBuild = false;
             }
-
-            GUILayout.BeginHorizontal();
-            if (allowBuild && GUILayout.Button("Get Expected Sharedbundle List"))
-            {
-                AssetbundleBuilder.WriteExpectedSharedBundles(settings);
-                GUIUtility.ExitGUI();
-            }
-            GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_OutputPath);
@@ -108,25 +93,25 @@ namespace BundleSystem
             EditorGUILayout.PropertyField(m_EmulateUseRemoteFolder);
             EditorGUILayout.PropertyField(m_CleanCache);
             EditorGUILayout.PropertyField(m_ForceRebuld);
-            EditorGUILayout.Space();
-
+            
             EditorGUILayout.PropertyField(m_UseCacheServer);
             if(m_UseCacheServer.boolValue)
             {
+                EditorGUI.indentLevel ++;
                 EditorGUILayout.PropertyField(m_CacheServerHost);
                 EditorGUILayout.PropertyField(m_CacheServerPort);
+                EditorGUI.indentLevel --;
             }
 
-            EditorGUILayout.Space();
             EditorGUILayout.PropertyField(m_UseFtp);
             if(m_UseFtp.boolValue)
             {
+                EditorGUI.indentLevel ++;
                 EditorGUILayout.PropertyField(m_FtpHost);
                 EditorGUILayout.PropertyField(m_FtpUser);
                 m_FtpPass.stringValue = EditorGUILayout.PasswordField("Ftp Password", m_FtpPass.stringValue);
+                EditorGUI.indentLevel --;
             }
-
-            GUILayout.Label($"Output folder : { settings.OutputPath }");
 
             serializedObject.ApplyModifiedProperties();
 
@@ -135,12 +120,6 @@ namespace BundleSystem
             if(AssetbundleBuildSettings.EditorInstance == settings)
             {
                 EditorGUILayout.BeginHorizontal();
-                if (allowBuild && GUILayout.Button("Build"))
-                {
-                    AssetbundleBuilder.BuildAssetBundles(settings);
-                    GUIUtility.ExitGUI();
-                }
-
                 EditorGUI.BeginDisabledGroup(!settings.UseFtp);
                 if (allowBuild && GUILayout.Button("Upload(FTP)"))
                 {
@@ -149,13 +128,6 @@ namespace BundleSystem
                 }
                 EditorGUI.EndDisabledGroup();
                 EditorGUILayout.EndHorizontal();
-            }
-            else
-            {
-                if (GUILayout.Button("Set as active setting"))
-                {
-                    AssetbundleBuildSettings.EditorInstance = settings;
-                }
             }
 
             EditorGUI.EndDisabledGroup();

@@ -19,9 +19,9 @@ namespace BundleSystem
 
         class CustomBuildParameters : BundleBuildParameters
         {
-            public AssetbundleBuildSettings CurrentSettings;
+            public List<BundleSetting> CurrentSettings;
 
-            public CustomBuildParameters(AssetbundleBuildSettings settings, 
+            public CustomBuildParameters(List<BundleSetting> settings, 
                 BuildTarget target, 
                 BuildTargetGroup group, 
                 string outputFolder) : base(target, group, outputFolder)
@@ -29,12 +29,11 @@ namespace BundleSystem
                 CurrentSettings = settings;
             }
 
-            // Override the GetCompressionForIdentifier method with new logic
             public override BuildCompression GetCompressionForIdentifier(string identifier)
             {
                 //find user set compression method
-                var found = CurrentSettings.BundleSettings.FirstOrDefault(setting => setting.BundleName == identifier);
-                return found == null || !found.CompressBundle ? BuildCompression.LZ4 : BuildCompression.LZMA;
+                var found = CurrentSettings.First(setting => setting.BundleName == identifier);
+                return !found.CompressBundle ? BuildCompression.LZ4 : BuildCompression.LZMA;
             }
         }
 
@@ -58,43 +57,13 @@ namespace BundleSystem
                 }
             }
             
-            var bundleList = GetAssetBundlesList(settings, out var sharedException);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, sharedException);
+            var bundleSettingList = settings.GetBundleSettings();
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleSettingList);
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
             {
                 EditorUtility.DisplayDialog("Succeeded!", $"Check {LogExpectedSharedBundleFileName} in your project root directory!", "Confirm");
             }
-        }
-
-        public static List<AssetBundleBuild> GetAssetBundlesList(AssetbundleBuildSettings settings, out List<string> sharedException)
-        {
-            var bundleList = new List<AssetBundleBuild>();
-            sharedException = new List<string>();
-
-            foreach (var setting in settings.BundleSettings)
-            {
-                //find folder
-                var folderPath = AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                if (!AssetDatabase.IsValidFolder(folderPath)) throw new Exception($"Could not found Path {folderPath} for {setting.BundleName}");
-
-                //collect assets
-                var assetPathes = new List<string>();
-                var loadPathes = new List<string>();
-                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, folderPath, setting.IncludeSubfolder);
-                if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {setting.BundleName}");
-
-                //make assetbundlebuild
-                var newBundle = new AssetBundleBuild();
-                newBundle.assetBundleName = setting.BundleName;
-                newBundle.assetNames = assetPathes.ToArray();
-                newBundle.addressableNames = loadPathes.ToArray();
-                bundleList.Add(newBundle);
-
-                if(!setting.AutoSharedBundle) sharedException.Add(setting.BundleName);
-            }
-
-            return bundleList;
         }
 
         public static void BuildAssetBundles(AssetbundleBuildSettings settings)
@@ -111,18 +80,16 @@ namespace BundleSystem
                 }
             }
 
-            var bundleList = GetAssetBundlesList(settings, out var sharedException);
+            var bundleSettingList = settings.GetBundleSettings();
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
             var outputPath = Utility.CombinePath(settings.OutputPath, buildTarget.ToString());
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, sharedException);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleSettingList);
 
-            bundleList.AddRange(treeResult.SharedBundles);
-
-            var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath);
+            var buildParams = new CustomBuildParameters(bundleSettingList, buildTarget, groupTarget, outputPath);
 
             buildParams.UseCache = !settings.ForceRebuild;
 
@@ -132,7 +99,7 @@ namespace BundleSystem
                 buildParams.CacheServerPort = settings.CacheServerPort;
             }
 
-            var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(bundleList.ToArray()), out var results);
+            var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(treeResult.ResultBundles.ToArray()), out var results);
 
             if (returnCode == ReturnCode.Success)
             {
@@ -159,7 +126,7 @@ namespace BundleSystem
             //we use unity provided dependency result for final check
             var deps = bundleResults.BundleInfos.ToDictionary(kv => kv.Key, kv => kv.Value.Dependencies.ToList());
 
-            var locals = settings.BundleSettings
+            var locals = settings.GetBundleSettings()
                 .Where(setting => setting.IncludedInPlayer)
                 .Select(setting => setting.BundleName)
                 .SelectMany(bundleName => Utility.CollectBundleDependencies(deps, bundleName, true))
@@ -184,7 +151,7 @@ namespace BundleSystem
             manifest.BuildTime = DateTime.UtcNow.Ticks;
             manifest.RemoteURL = remoteURL;
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Utility.CombinePath(path, AssetbundleBuildSettings.ManifestFileName), JsonUtility.ToJson(manifest, true));
+            File.WriteAllText(Utility.CombinePath(path, BundleManager.ManifestFileName), JsonUtility.ToJson(manifest, true));
         }
 
         static void WriteSharedBundleLog(string path, AssetDependencyTree.ProcessResult treeResult)

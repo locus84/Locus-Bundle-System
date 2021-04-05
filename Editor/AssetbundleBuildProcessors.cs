@@ -16,7 +16,7 @@ namespace BundleSystem
             var settings = AssetbundleBuildSettings.EditorInstance;
             //no instance found
             if (settings == null) return;
-            if (Directory.Exists(AssetbundleBuildSettings.LocalBundleRuntimePath)) Directory.Delete(AssetbundleBuildSettings.LocalBundleRuntimePath, true);
+            if (Directory.Exists(BundleManager.LocalBundleRuntimePath)) Directory.Delete(BundleManager.LocalBundleRuntimePath, true);
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
 
             //there should be a local bundle
@@ -37,16 +37,16 @@ namespace BundleSystem
             }
 
             //load manifest and make local bundle list
-            var manifest = JsonUtility.FromJson<AssetbundleBuildManifest>(File.ReadAllText(Utility.CombinePath(localBundleSourcePath, AssetbundleBuildSettings.ManifestFileName)));
+            var manifest = JsonUtility.FromJson<AssetbundleBuildManifest>(File.ReadAllText(Utility.CombinePath(localBundleSourcePath, BundleManager.ManifestFileName)));
             var localBundleNames = manifest.BundleInfos.Where(bi => bi.IsLocal).Select(bi => bi.BundleName).ToList();
 
-            Directory.CreateDirectory(AssetbundleBuildSettings.LocalBundleRuntimePath);
+            Directory.CreateDirectory(BundleManager.LocalBundleRuntimePath);
 
             //copy only manifest and local bundles                        
             foreach(var file in new DirectoryInfo(localBundleSourcePath).GetFiles())
             {
-                if(!localBundleNames.Contains(file.Name) && AssetbundleBuildSettings.ManifestFileName != file.Name) continue;
-                FileUtil.CopyFileOrDirectory(file.FullName, Utility.CombinePath(AssetbundleBuildSettings.LocalBundleRuntimePath, file.Name));
+                if(!localBundleNames.Contains(file.Name) && BundleManager.ManifestFileName != file.Name) continue;
+                FileUtil.CopyFileOrDirectory(file.FullName, Utility.CombinePath(BundleManager.LocalBundleRuntimePath, file.Name));
             }
 
             AssetDatabase.Refresh();
@@ -54,7 +54,9 @@ namespace BundleSystem
 
         public void OnPostprocessBuild(BuildReport report)
         {
-            if(FileUtil.DeleteFileOrDirectory(AssetbundleBuildSettings.LocalBundleRuntimePath))
+            //delete directory and meta file
+            if(FileUtil.DeleteFileOrDirectory(BundleManager.LocalBundleRuntimePath) || 
+                FileUtil.DeleteFileOrDirectory(BundleManager.LocalBundleRuntimePath + ".meta"))
             {
                 AssetDatabase.Refresh();
             }

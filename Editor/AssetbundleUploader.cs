@@ -7,7 +7,7 @@ namespace BundleSystem
 {
     public class AssetbundleUploader : MonoBehaviour
     {
-        public static void UploadAllRemoteFiles(AssetbundleBuildSettings settings)
+        public static void UploadAllRemoteFiles(FolderBasedAssetbundleBuildSettings settings)
         {
             System.Exception exception = null;
             try

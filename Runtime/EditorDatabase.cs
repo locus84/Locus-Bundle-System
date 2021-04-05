@@ -5,33 +5,29 @@ using UnityEngine;
 #if UNITY_EDITOR
 namespace BundleSystem
 {
-    public class EditorAssetMap
+    public class EditorDatabase
     {        
+        public bool UseAssetDatabase;
+        public bool CleanCache;
+        public bool UseOuputAsRemote;
+        public string OutputPath;
+
         private Dictionary<string, Dictionary<string, List<string>>> m_Map = new Dictionary<string, Dictionary<string, List<string>>>();
         static List<string> s_EmptyStringList = new List<string>();
         
-        public EditorAssetMap(AssetbundleBuildSettings settings)
+        public void Append(string bundleName, string[] assetNames, string[] addressableNames)
         {
-            var assetPath = new List<string>();
-            var loadPath = new List<string>();
-            foreach (var setting in settings.BundleSettings)
+            var assetDict = new Dictionary<string, List<string>>();
+            for(int i = 0; i < assetNames.Length; i++)
             {
-                assetPath.Clear();
-                loadPath.Clear();
-                var folderPath = UnityEditor.AssetDatabase.GUIDToAssetPath(setting.Folder.guid);
-                Utility.GetFilesInDirectory(string.Empty, assetPath, loadPath, folderPath, setting.IncludeSubfolder);
-                var assetList = new Dictionary<string, List<string>>();
-                for(int i = 0; i < assetPath.Count; i++)
+                if(assetDict.TryGetValue(addressableNames[i], out var list))
                 {
-                    if(assetList.TryGetValue(loadPath[i], out var list))
-                    {
-                        list.Add(assetPath[i]);
-                        continue;
-                    }
-                    assetList.Add(loadPath[i], new List<string>() { assetPath[i] });
+                    list.Add(assetNames[i]);
+                    continue;
                 }
-                m_Map.Add(setting.BundleName, assetList);
+                assetDict.Add(addressableNames[i], new List<string>() { assetNames[i] });
             }
+            m_Map.Add(bundleName, assetDict);
         }
 
         public List<string> GetAssetPaths(string bundleName, string assetName)

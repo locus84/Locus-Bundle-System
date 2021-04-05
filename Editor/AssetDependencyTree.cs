@@ -13,24 +13,32 @@ namespace BundleSystem
         public class ProcessResult
         {
             public Dictionary<string, HashSet<string>> BundleDependencies;
+            public List<AssetBundleBuild> ResultBundles;
             public List<AssetBundleBuild> SharedBundles;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, List<string> exceptions)
+        //TODO: check dependency exception
+        public static ProcessResult ProcessDependencyTree(List<BundleSetting> bundleSettings)
         {
             var context = new Context();
             var rootNodesToProcess = new List<RootNode>();
+            var resultList = new List<AssetBundleBuild>();
 
             //collecting reference should be done after adding all root nodes
             //if not, there might be false positive shared bundle that already exist in bundle defines
-            foreach(var bundle in definedBundles)
+            foreach(var setting in bundleSettings)
             {
-                var allowCollect = !exceptions.Contains(bundle.assetBundleName);
+                var bundle = new AssetBundleBuild();
+                bundle.assetBundleName = setting.BundleName;
+                bundle.assetNames = setting.AssetNames;
+                bundle.addressableNames = setting.AddressableNames;
+                resultList.Add(bundle);
+
                 var depsHash = new HashSet<string>();
                 context.DependencyDic.Add(bundle.assetBundleName, depsHash);
                 foreach(var asset in bundle.assetNames)
                 {
-                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false, allowCollect);
+                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false, setting.AutoSharedBundle);
                     context.RootNodes.Add(asset, rootNode);
                     rootNodesToProcess.Add(rootNode);
                 }
@@ -43,7 +51,7 @@ namespace BundleSystem
                 node.CollectNodes(context);
             } 
 
-            var resultList = new List<AssetBundleBuild>();
+            var sharedBundles = new List<AssetBundleBuild>();
             //convert found shared node proper struct
             foreach(var sharedRootNode in context.ResultSharedNodes)
             {
@@ -55,9 +63,10 @@ namespace BundleSystem
                     addressableNames = assetNames
                 };
                 resultList.Add(bundleDefinition);
+                sharedBundles.Add(bundleDefinition);
             }
 
-            return new ProcessResult() { BundleDependencies = context.DependencyDic, SharedBundles = resultList };
+            return new ProcessResult() { BundleDependencies = context.DependencyDic, ResultBundles = resultList, SharedBundles = sharedBundles };
         }
 
         //actual node tree context

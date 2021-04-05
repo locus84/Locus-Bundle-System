@@ -8,47 +8,6 @@ namespace BundleSystem
 {
     public static partial class BundleManager
     {
-#if UNITY_EDITOR
-        private static AssetbundleBuildSettings s_EditorBuildSettings;
-        private static EditorAssetMap s_EditorAssetMap;
-
-        static void SetupAssetdatabaseUsage()
-        {
-
-            s_EditorBuildSettings = AssetbundleBuildSettings.EditorInstance;
-            if (s_EditorBuildSettings == null || !s_EditorBuildSettings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
-
-            if (s_EditorBuildSettings.CleanCacheInEditor)
-            {
-                Caching.ClearCache();
-            }
-
-            UseAssetDatabase = !s_EditorBuildSettings.EmulateInEditor;
-
-            //create editor asset map
-            if(UseAssetDatabase)
-            {
-                s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
-                //set initialied so it does not need explit call initialzed when using aassetdatabase
-                Initialized = true;
-            }
-        }
-
-        public static void SetupApiTestSettings(AssetbundleBuildSettings settings = null)
-        {
-            if(Application.isPlaying) throw new System.Exception("This funcion cannot be called while playing!");
-            if(settings == null) settings = AssetbundleBuildSettings.EditorInstance;
-            if(settings == null || !settings.IsValid()) throw new System.Exception("AssetbundleBuildSetting is not valid");
-            UseAssetDatabase = true;
-            //create editor asset map only for testing
-            s_EditorAssetMap = new EditorAssetMap(settings);
-        }
-
-        private static void EnsureAssetDatabase()
-        {
-            if(!Application.isPlaying && s_EditorAssetMap == null) throw new System.Exception("EditorAssetMap is null, try call SetupApiTestSettings before calling actual api in non-play mode");
-        }
-#endif
 
         public static T[] LoadAll<T>(string bundleName) where T : Object
         {
@@ -56,7 +15,7 @@ namespace BundleSystem
             if (UseAssetDatabase)
             {
                 EnsureAssetDatabase();
-                var assets = s_EditorAssetMap.GetAssetPaths(bundleName);
+                var assets = s_EditorDatabase.GetAssetPaths(bundleName);
                 if (assets.Count == 0) return new T[0];
 
                 var typeExpected = typeof(T);
@@ -85,7 +44,7 @@ namespace BundleSystem
             if (UseAssetDatabase) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
                 return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath);
             }
@@ -104,7 +63,7 @@ namespace BundleSystem
             if (UseAssetDatabase) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return new T[0];
                 var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(assetPath);
                 return assets.Select(a => a as T).Where(a => a != null).ToArray();
@@ -124,7 +83,7 @@ namespace BundleSystem
             if (UseAssetDatabase) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorAssetMap.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return new BundleRequest<T>((T)null); //asset not exist
                 return new BundleRequest<T>(UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath));
             }
@@ -149,11 +108,6 @@ namespace BundleSystem
             ReleaseBundleInternal(loadedBundle, 1);
         }
 
-        public static void LoadScene(BundledAssetPath path, LoadSceneMode mode)
-        {
-            LoadScene(path.BundleName, path.AssetName, mode);
-        }
-
         public static void LoadScene(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
@@ -161,7 +115,7 @@ namespace BundleSystem
             if (UseAssetDatabase)
             {
                 EnsureAssetDatabase();
-                var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
+                var scenePath = s_EditorDatabase.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return; // scene does not exist
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
                 return;
@@ -171,11 +125,6 @@ namespace BundleSystem
             SceneManager.LoadScene(Path.GetFileName(sceneName), mode);
         }
         
-        public static AsyncOperation LoadSceneAsync(BundledAssetPath path, LoadSceneMode mode)
-        {
-            return LoadSceneAsync(path.BundleName, path.AssetName, mode);
-        }
-
         public static AsyncOperation LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
@@ -183,7 +132,7 @@ namespace BundleSystem
             if (UseAssetDatabase)
             {
                 EnsureAssetDatabase();
-                var scenePath = s_EditorAssetMap.GetScenePath(bundleName, sceneName);
+                var scenePath = s_EditorDatabase.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
                 return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
@@ -214,7 +163,7 @@ namespace BundleSystem
             if (UseAssetDatabase) 
             {
                 EnsureAssetDatabase();
-                return s_EditorAssetMap.IsAssetExist(bundleName, assetName);
+                return s_EditorDatabase.IsAssetExist(bundleName, assetName);
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
