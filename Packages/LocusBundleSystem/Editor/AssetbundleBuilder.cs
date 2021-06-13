@@ -92,6 +92,7 @@ namespace BundleSystem
             var buildParams = new CustomBuildParameters(bundleSettingList, buildTarget, groupTarget, outputPath);
 
             buildParams.UseCache = !settings.ForceRebuild;
+            buildParams.WriteLinkXML = true;
 
             if (buildParams.UseCache && settings.UseCacheServer)
             {
@@ -105,7 +106,8 @@ namespace BundleSystem
             {
                 WriteManifestFile(outputPath, settings, results, buildTarget, settings.RemoteURL);
                 WriteLogFile(outputPath, results);
-                var linkPath = TypeLinkerGenerator.Generate(settings, results);
+
+                var linkPath = CopyLinkDotXml(outputPath, AssetDatabase.GetAssetPath(settings));
                 if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
             }
             else
@@ -113,6 +115,15 @@ namespace BundleSystem
                 EditorUtility.DisplayDialog("Build Failed!", $"Bundle build failed, \n Code : {returnCode}", "Confirm");
                 Debug.LogError(returnCode);
             }
+        }
+
+        static string CopyLinkDotXml(string outputPath, string settingsPath)
+        {
+            var linkPath = Utility.CombinePath(outputPath, "link.xml");
+            var movePath = Utility.CombinePath(settingsPath.Remove(settingsPath.LastIndexOf('/')), "link.xml");
+            FileUtil.CopyFileOrDirectory(linkPath, movePath);
+            AssetDatabase.Refresh();
+            return linkPath;
         }
 
         /// <summary>

@@ -7,6 +7,24 @@ namespace BundleSystem
 {
     public static partial class BundleManager
     {
+        public class TrackInfo 
+        {
+            public Component OwnerComponent;
+            public Dictionary<string, int> BundleRefCountDic = new Dictionary<string, int>();
+        }
+
+        public struct LoadInfo 
+        {
+            public string BundleName;
+            public int LoadedFrame;
+        }
+        
+        private static Dictionary<UnityEngine.Object, string> s_BundleNameDic = new Dictionary<Object, string>();
+        private static Stack<TrackInfo> s_TrackInfoPool = new Stack<TrackInfo>();
+        private static List<TrackInfo> s_TrackInfoList = new List<TrackInfo>();
+        private static List<LoadInfo> s_LoadInfoList = new List<LoadInfo>();
+        private static List<BundleAsyncOperation> s_AsyncLoadInfo = new List<BundleAsyncOperation>();
+        
         //weak refernce pool to reduce allocation
         private static Stack<System.WeakReference> s_WeakRefPool = new Stack<System.WeakReference>(50);
         //bundle ref count
