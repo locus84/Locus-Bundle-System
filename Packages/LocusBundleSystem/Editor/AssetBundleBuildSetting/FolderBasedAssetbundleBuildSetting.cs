@@ -7,7 +7,7 @@ using UnityEngine;
 namespace BundleSystem
 {
     [CreateAssetMenu(fileName = "AssetbundleBuildSettings.asset", menuName = "Create Assetbundle Build Settings", order = 999)]
-    public class FolderBasedAssetbundleBuildSettings : AssetbundleBuildSettings
+    public class FolderBasedAssetbundleBuildSetting : AssetbundleBuildSetting
     {
         /// <summary>
         /// check setting is valid

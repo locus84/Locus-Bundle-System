@@ -37,13 +37,7 @@ namespace BundleSystem
             }
         }
 
-        public static void BuildAssetBundles()
-        {
-            var editorInstance = AssetbundleBuildSettings.EditorInstance;
-            BuildAssetBundles(editorInstance);
-        }
-
-        public static void WriteExpectedSharedBundles(AssetbundleBuildSettings settings)
+        public static void WriteExpectedSharedBundles(AssetbundleBuildSetting settings)
         {
             if(!Application.isBatchMode)
             {
@@ -66,7 +60,7 @@ namespace BundleSystem
             }
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSettings settings)
+        public static void BuildAssetBundles(AssetbundleBuildSetting settings)
         {
             if(!Application.isBatchMode)
             {
@@ -129,7 +123,7 @@ namespace BundleSystem
         /// <summary>
         /// write manifest into target path.
         /// </summary>
-        static void WriteManifestFile(string path, AssetbundleBuildSettings settings, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
+        static void WriteManifestFile(string path, AssetbundleBuildSetting settings, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
         {
             var manifest = new AssetbundleBuildManifest();
             manifest.BuildTarget = target.ToString();

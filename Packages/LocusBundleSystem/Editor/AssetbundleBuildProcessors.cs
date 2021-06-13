@@ -13,7 +13,7 @@ namespace BundleSystem
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var settings = AssetbundleBuildSettings.EditorInstance;
+            var settings = AssetbundleBuildSetting.GetActiveSetting();
             //no instance found
             if (settings == null) return;
             if (Directory.Exists(BundleManager.LocalBundleRuntimePath)) Directory.Delete(BundleManager.LocalBundleRuntimePath, true);

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace BundleSystem
 {
-    public abstract class AssetbundleBuildSettings : ScriptableObject
+    public abstract class AssetbundleBuildSetting : ScriptableObject
     {
         static bool isDirty;
         
@@ -12,7 +12,7 @@ namespace BundleSystem
         {
             static void OnPostprocessAllAssets(string[] _, string[] __, string[] ___, string[] ____)
             {
-                AssetbundleBuildSettings.isDirty = true;
+                AssetbundleBuildSetting.isDirty = true;
             }
         }
 
@@ -20,22 +20,23 @@ namespace BundleSystem
         [MenuItem("Window/Asset Management/Select Active Assetbundle Build Settings")]
         static void SelectActiveSettings()
         {
-            Selection.activeObject = AssetbundleBuildSettings.EditorInstance;
+            Selection.activeObject = AssetbundleBuildSetting.GetActiveSetting();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void EditorRuntimeInitialize()
         {
-            if(EditorInstance != null) 
+            var editorInstance = AssetbundleBuildSetting.GetActiveSetting();
+            if(editorInstance != null) 
             {
-                BundleManager.SetEditorDatabase(EditorInstance.CreateEditorDatabase());
+                BundleManager.SetEditorDatabase(editorInstance.CreateEditorDatabase());
             }
         }
 
         [ContextMenu("Set As Active Setting")]
         void SetDefaultSetting()
         {
-            AssetbundleBuildSettings.EditorInstance = this;
+            AssetbundleBuildSetting.SetActiveSetting(this);
         }
         
         [ContextMenu("Build With This Setting")]
@@ -43,7 +44,6 @@ namespace BundleSystem
         {
             AssetbundleBuilder.BuildAssetBundles(this);
         }
-
         
         [ContextMenu("Get Expected Shared Bundles")]
         void GetSharedBundleLog()
@@ -51,44 +51,45 @@ namespace BundleSystem
             AssetbundleBuilder.WriteExpectedSharedBundles(this);
         }
 
-        static AssetbundleBuildSettings s_EditorInstance = null;
+        static AssetbundleBuildSetting s_ActiveSetting = null;
 
-        public static AssetbundleBuildSettings EditorInstance
+        public static AssetbundleBuildSetting GetActiveSetting(bool findIfNotExist = true)
         {
-            get
+            if (s_ActiveSetting != null) return s_ActiveSetting;
+
+            var defaultGUID = UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", string.Empty);
+            var assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(defaultGUID);
+
+            if (!string.IsNullOrEmpty(assetPath))
             {
-                if (s_EditorInstance != null) return s_EditorInstance;
-
-                var defaultGUID = UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", string.Empty);
-                var assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(defaultGUID);
-
-                if (!string.IsNullOrEmpty(assetPath))
+                var found = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>(assetPath);
+                if(found != null)
                 {
-                    var found = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSettings>(assetPath);
-                    if(found != null)
-                    {
-                        s_EditorInstance = found;
-                        return s_EditorInstance;
-                    }
+                    s_ActiveSetting = found;
+                    return s_ActiveSetting;
                 }
-
-                var assetPathes = UnityEditor.AssetDatabase.FindAssets("t:AssetbundleBuildSettingsBase");
-                if (assetPathes.Length == 0) return null;
-
-                var guid = UnityEditor.AssetDatabase.GUIDToAssetPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
-                UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", guid);
-                s_EditorInstance = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSettings>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
-                return s_EditorInstance;
             }
-            set
-            {
-                var assetPath = UnityEditor.AssetDatabase.GetAssetPath(value);
-                UnityEditor.EditorPrefs.SetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
-                s_EditorInstance = value;
-                isDirty = true;
-            }
+            
+            if(!findIfNotExist) return null;
+
+            var typeName = typeof(AssetbundleBuildSetting).Name;
+            var assetPathes = UnityEditor.AssetDatabase.FindAssets($"t:{typeName}");
+
+            if (assetPathes.Length == 0) return null;
+
+            var guid = UnityEditor.AssetDatabase.GUIDToAssetPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
+            UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", guid);
+            s_ActiveSetting = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
+            return s_ActiveSetting;
         }
 
+        public static void SetActiveSetting(AssetbundleBuildSetting setting)
+        {
+            var assetPath = UnityEditor.AssetDatabase.GetAssetPath(setting);
+            UnityEditor.EditorPrefs.SetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
+            s_ActiveSetting = setting;
+            isDirty = true;
+        }
 
         public abstract List<BundleSetting> GetBundleSettings();
         public string OutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + OutputFolder;

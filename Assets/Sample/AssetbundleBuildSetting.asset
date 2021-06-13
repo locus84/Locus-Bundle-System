@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a0646337dd01d540bc3328e5140e0c5, type: 3}
+  m_Name: AssetbundleBuildSettings
+  m_EditorClassIdentifier: 
+  BundleSettings:
+  - BundleName: LocalScene
+    IncludedInPlayer: 1
+    Folder:
+      guid: d8fc0752578080b48b9f7b2693066c23
+    IncludeSubfolder: 0
+    CompressBundle: 1
+  - BundleName: Local
+    IncludedInPlayer: 1
+    Folder:
+      guid: 890d74b798bc25e4e9ed0662d4439c55
+    IncludeSubfolder: 0
+    CompressBundle: 1
+  - BundleName: Remote
+    IncludedInPlayer: 0
+    Folder:
+      guid: 3620c8e1f77dbac43a4a01c096ecf65f
+    IncludeSubfolder: 0
+    CompressBundle: 1
+  AutoCreateSharedBundles: 1
+  m_RemoteOutputFolder: RemoteBundles
+  m_LocalOutputFolder: LocalBundles
+  RemoteURL: http://localhost/
+  EmulateInEditor: 0
+  EmulateWithoutRemoteURL: 1
+  CleanCacheInEditor: 1
+  ForceRebuild: 1
+  UseCacheServer: 0
+  CacheServerHost: 
+  CacheServerPort: 0
+  UseFtp: 0
+  FtpHost: 
+  FtpUserName: 
+  FtpUserPass: 

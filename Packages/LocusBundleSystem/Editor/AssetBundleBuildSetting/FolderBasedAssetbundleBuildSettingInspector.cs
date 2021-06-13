@@ -5,8 +5,8 @@ using UnityEditorInternal;
 namespace BundleSystem
 {
     [DisallowMultipleComponent]
-    [CustomEditor(typeof(FolderBasedAssetbundleBuildSettings))]
-    public class FolderBasedAssetbundleBuildSettingsInspector : Editor
+    [CustomEditor(typeof(FolderBasedAssetbundleBuildSetting))]
+    public class FolderBasedAssetbundleBuildSettingInspector : Editor
     {
         SerializedProperty m_SettingsProperty;
         SerializedProperty m_OutputPath;
@@ -45,7 +45,7 @@ namespace BundleSystem
             m_FtpUser = serializedObject.FindProperty("FtpUserName");
             m_FtpPass = serializedObject.FindProperty("FtpUserPass");
 
-            var settings = target as FolderBasedAssetbundleBuildSettings;
+            var settings = target as FolderBasedAssetbundleBuildSetting;
 
             list = new ReorderableList(serializedObject, m_SettingsProperty, true, true, true, true)
             {
@@ -73,7 +73,7 @@ namespace BundleSystem
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            var settings = target as FolderBasedAssetbundleBuildSettings;
+            var settings = target as FolderBasedAssetbundleBuildSetting;
 
             list.DoLayoutList();
             bool allowBuild = true;
@@ -117,7 +117,7 @@ namespace BundleSystem
 
             EditorGUI.BeginDisabledGroup(Application.isPlaying);
 
-            if(AssetbundleBuildSettings.EditorInstance == settings)
+            if(AssetbundleBuildSetting.GetActiveSetting(false) == settings)
             {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUI.BeginDisabledGroup(!settings.UseFtp);
