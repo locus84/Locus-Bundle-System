@@ -71,7 +71,7 @@ namespace BundleSystem
             }
         }
 
-        //prefab placed into a scene is encoded into scene when building, and it can't be referenced as a single prefab.
+        //prefabs placed into a scene are encoded into scene when building, and they does not participate bundle references.
         //this is somewhat weird but this happens on scriptable build pipeline
         public static string[] UnwarpSceneEncodedPrefabs(string scenePath, string[] sceneDeps)
         {
