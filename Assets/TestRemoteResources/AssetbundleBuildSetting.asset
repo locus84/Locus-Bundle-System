@@ -21,7 +21,28 @@ MonoBehaviour:
   UseCacheServer: 0
   CacheServerHost: 
   CacheServerPort: 0
-  FolderSettings: []
+  FolderSettings:
+  - BundleName: Local
+    IncludedInPlayer: 1
+    Folder:
+      guid: 7fb63c8a4a5634aacb834d876809a1d3
+    IncludeSubfolder: 1
+    CompressBundle: 1
+    AutoSharedBundle: 1
+  - BundleName: Object
+    IncludedInPlayer: 0
+    Folder:
+      guid: fcf41fca05c3e44aea4b98c3b84f939c
+    IncludeSubfolder: 1
+    CompressBundle: 1
+    AutoSharedBundle: 1
+  - BundleName: Scene
+    IncludedInPlayer: 0
+    Folder:
+      guid: e17ac4035376345cabfaaa89c62ebbbd
+    IncludeSubfolder: 1
+    CompressBundle: 1
+    AutoSharedBundle: 1
   UseFtp: 0
   FtpHost: 
   FtpUserName: 

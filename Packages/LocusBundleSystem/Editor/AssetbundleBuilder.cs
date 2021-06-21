@@ -37,7 +37,7 @@ namespace BundleSystem
             }
         }
 
-        public static void WriteExpectedSharedBundles(AssetbundleBuildSetting settings)
+        public static void WriteExpectedSharedBundles(AssetbundleBuildSetting setting)
         {
             if(!Application.isBatchMode)
             {
@@ -51,7 +51,7 @@ namespace BundleSystem
                 }
             }
             
-            var bundleSettingList = settings.GetBundleSettings();
+            var bundleSettingList = setting.GetBundleSettings();
             var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleSettingList);
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -60,7 +60,7 @@ namespace BundleSystem
             }
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSetting settings)
+        public static void BuildAssetBundles(AssetbundleBuildSetting setting)
         {
             if(!Application.isBatchMode)
             {
@@ -74,34 +74,34 @@ namespace BundleSystem
                 }
             }
 
-            var bundleSettingList = settings.GetBundleSettings();
+            var bundleSettingList = setting.GetBundleSettings();
 
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var groupTarget = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
-            var outputPath = Utility.CombinePath(settings.OutputPath, buildTarget.ToString());
+            var outputPath = Utility.CombinePath(setting.OutputPath, buildTarget.ToString());
             //generate sharedBundle if needed, and pre generate dependency
             var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleSettingList);
 
             var buildParams = new CustomBuildParameters(bundleSettingList, buildTarget, groupTarget, outputPath);
 
-            buildParams.UseCache = !settings.ForceRebuild;
+            buildParams.UseCache = !setting.ForceRebuild;
             buildParams.WriteLinkXML = true;
 
-            if (buildParams.UseCache && settings.UseCacheServer)
+            if (buildParams.UseCache && setting.UseCacheServer)
             {
-                buildParams.CacheServerHost = settings.CacheServerHost;
-                buildParams.CacheServerPort = settings.CacheServerPort;
+                buildParams.CacheServerHost = setting.CacheServerHost;
+                buildParams.CacheServerPort = setting.CacheServerPort;
             }
 
             var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(treeResult.ResultBundles.ToArray()), out var results);
 
             if (returnCode == ReturnCode.Success)
             {
-                WriteManifestFile(outputPath, settings, results, buildTarget, settings.RemoteURL);
+                WriteManifestFile(outputPath, setting, results, buildTarget, setting.RemoteURL);
                 WriteLogFile(outputPath, results);
 
-                var linkPath = CopyLinkDotXml(outputPath, AssetDatabase.GetAssetPath(settings));
+                var linkPath = CopyLinkDotXml(outputPath, AssetDatabase.GetAssetPath(setting));
                 if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
             }
             else
@@ -111,10 +111,10 @@ namespace BundleSystem
             }
         }
 
-        static string CopyLinkDotXml(string outputPath, string settingsPath)
+        static string CopyLinkDotXml(string outputPath, string settingPath)
         {
             var linkPath = Utility.CombinePath(outputPath, "link.xml");
-            var movePath = Utility.CombinePath(settingsPath.Remove(settingsPath.LastIndexOf('/')), "link.xml");
+            var movePath = Utility.CombinePath(settingPath.Remove(settingPath.LastIndexOf('/')), "link.xml");
             FileUtil.CopyFileOrDirectory(linkPath, movePath);
             AssetDatabase.Refresh();
             return linkPath;
@@ -123,7 +123,7 @@ namespace BundleSystem
         /// <summary>
         /// write manifest into target path.
         /// </summary>
-        static void WriteManifestFile(string path, AssetbundleBuildSetting settings, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
+        static void WriteManifestFile(string path, AssetbundleBuildSetting setting, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
         {
             var manifest = new AssetbundleBuildManifest();
             manifest.BuildTarget = target.ToString();
@@ -131,9 +131,9 @@ namespace BundleSystem
             //we use unity provided dependency result for final check
             var deps = bundleResults.BundleInfos.ToDictionary(kv => kv.Key, kv => kv.Value.Dependencies.ToList());
 
-            var locals = settings.GetBundleSettings()
-                .Where(setting => setting.IncludedInPlayer)
-                .Select(setting => setting.BundleName)
+            var locals = setting.GetBundleSettings()
+                .Where(bs => bs.IncludedInPlayer)
+                .Select(bs => bs.BundleName)
                 .SelectMany(bundleName => Utility.CollectBundleDependencies(deps, bundleName, true))
                 .Distinct()
                 .ToList();

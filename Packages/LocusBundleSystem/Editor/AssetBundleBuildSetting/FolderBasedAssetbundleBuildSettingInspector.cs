@@ -73,11 +73,11 @@ namespace BundleSystem
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            var settings = target as FolderBasedAssetbundleBuildSetting;
+            var setting = target as FolderBasedAssetbundleBuildSetting;
 
             list.DoLayoutList();
             bool allowBuild = true;
-            if (!settings.IsValid())
+            if (!setting.IsValid())
             {
                 GUILayout.Label("Duplicate or Empty BundleName detected");
                 allowBuild = false;
@@ -85,7 +85,7 @@ namespace BundleSystem
 
             GUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(m_OutputPath);
-            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Utility.CombinePath(settings.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
+            if (GUILayout.Button("Open", GUILayout.ExpandWidth(false))) EditorUtility.RevealInFinder(Utility.CombinePath(setting.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString()));
             GUILayout.EndHorizontal();
             EditorGUILayout.PropertyField(m_RemoteURL);
             EditorGUILayout.Space();
@@ -117,13 +117,13 @@ namespace BundleSystem
 
             EditorGUI.BeginDisabledGroup(Application.isPlaying);
 
-            if(AssetbundleBuildSetting.GetActiveSetting(false) == settings)
+            if(AssetbundleBuildSetting.GetActiveSetting(false) == setting)
             {
                 EditorGUILayout.BeginHorizontal();
-                EditorGUI.BeginDisabledGroup(!settings.UseFtp);
+                EditorGUI.BeginDisabledGroup(!setting.UseFtp);
                 if (allowBuild && GUILayout.Button("Upload(FTP)"))
                 {
-                    AssetbundleUploader.UploadAllRemoteFiles(settings);
+                    AssetbundleUploader.UploadAllRemoteFiles(setting);
                     GUIUtility.ExitGUI();
                 }
                 EditorGUI.EndDisabledGroup();

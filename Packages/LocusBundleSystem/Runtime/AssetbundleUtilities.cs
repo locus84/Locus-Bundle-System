@@ -10,7 +10,7 @@ namespace BundleSystem
     using System.Linq;
     using UnityEditor;
     /// <summary>
-    /// utilities can be used in runtime but in editor
+    /// utilities can be used in runtime but only in editor 
     /// or just in editor scripts
     /// </summary>
     public static partial class Utility

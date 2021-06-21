@@ -7,15 +7,15 @@ namespace BundleSystem
 {
     public class AssetbundleUploader : MonoBehaviour
     {
-        public static void UploadAllRemoteFiles(FolderBasedAssetbundleBuildSetting settings)
+        public static void UploadAllRemoteFiles(FolderBasedAssetbundleBuildSetting setting)
         {
             System.Exception exception = null;
             try
             {
                 var buildTargetString = EditorUserBuildSettings.activeBuildTarget.ToString();
-                var credential = new NetworkCredential(settings.FtpUserName, settings.FtpUserPass);
-                var uploadRootPath = Utility.CombinePath(settings.FtpHost, buildTargetString);
-                var dirInfo = new DirectoryInfo(Utility.CombinePath(settings.OutputPath, buildTargetString));
+                var credential = new NetworkCredential(setting.FtpUserName, setting.FtpUserPass);
+                var uploadRootPath = Utility.CombinePath(setting.FtpHost, buildTargetString);
+                var dirInfo = new DirectoryInfo(Utility.CombinePath(setting.OutputPath, buildTargetString));
                 var files = dirInfo.GetFiles();
                 var progress = 0f;
                 var progressStep = 1f / files.Length;

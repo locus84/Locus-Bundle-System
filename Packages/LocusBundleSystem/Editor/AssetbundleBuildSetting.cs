@@ -12,12 +12,13 @@ namespace BundleSystem
         {
             static void OnPostprocessAllAssets(string[] _, string[] __, string[] ___, string[] ____)
             {
+                UnityEngine.Debug.Log("AssetBundleBuildSetting is Dirty");
                 AssetbundleBuildSetting.isDirty = true;
             }
         }
 
         // Add menu named "My Window" to the Window menu
-        [MenuItem("Window/Asset Management/Select Active Assetbundle Build Settings")]
+        [MenuItem("Window/Asset Management/Select Active Assetbundle Build Setting")]
         static void SelectActiveSettings()
         {
             Selection.activeObject = AssetbundleBuildSetting.GetActiveSetting();
