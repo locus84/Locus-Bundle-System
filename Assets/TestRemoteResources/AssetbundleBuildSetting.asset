@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c329078d21e19b543a5c374af375837d, type: 3}
+  m_Script: {fileID: 11500000, guid: c26c8bc81bbb34a37bae85dd637ff843, type: 3}
   m_Name: AssetbundleBuildSetting
   m_EditorClassIdentifier: 
   OutputFolder: AssetBundles
@@ -21,29 +21,3 @@ MonoBehaviour:
   UseCacheServer: 0
   CacheServerHost: 
   CacheServerPort: 0
-  FolderSettings:
-  - BundleName: Local
-    IncludedInPlayer: 1
-    Folder:
-      guid: 7fb63c8a4a5634aacb834d876809a1d3
-    IncludeSubfolder: 1
-    CompressBundle: 1
-    AutoSharedBundle: 1
-  - BundleName: Object
-    IncludedInPlayer: 0
-    Folder:
-      guid: fcf41fca05c3e44aea4b98c3b84f939c
-    IncludeSubfolder: 1
-    CompressBundle: 1
-    AutoSharedBundle: 1
-  - BundleName: Scene
-    IncludedInPlayer: 0
-    Folder:
-      guid: e17ac4035376345cabfaaa89c62ebbbd
-    IncludeSubfolder: 1
-    CompressBundle: 1
-    AutoSharedBundle: 1
-  UseFtp: 0
-  FtpHost: 
-  FtpUserName: 
-  FtpUserPass: 

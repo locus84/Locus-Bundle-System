@@ -44,9 +44,9 @@ It also can be changed later on by patching.
 
 ## How to Setup 
 
-**Assets -> Create -> Create Bundle Build Settings**
+**Assets -> Create -> Create Bundle Build Setting**
 
-Create AssetBundleSettings ScriptableObject using Context Menu.\
+Create AssetBundleSetting ScriptableObject using Context Menu.\
 This object can be anywhere under Assets folder
 
 **Setup Bundle Informations**
@@ -222,7 +222,7 @@ BundleSystem.BundledAssetPath MyAsset;
       {
          //call this bofore you call bundle manager api while not playing
          //while not playing, BundleManager always utilies AssetDatabase
-         BundleSystem.BundleManager.SetupApiTestSettings();
+         BundleSystem.BundleManager.SetupApiTestSetting();
          Assert.IsTrue(BundleSystem.BundleManager.IsAssetExist("LocalScene", "Inner/TitleScene"));
          Assert.IsTrue(BundleSystem.BundleManager.IsAssetExist("Sprites", "MySprite"));
       }

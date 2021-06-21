@@ -25,7 +25,13 @@ namespace BundleSystem
         /// <summary>
         /// Search files in directory
         /// </summary>
-        public static void GetFilesInDirectory(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, string folderPath, bool includeSubdir)
+        
+        public static void GetFilesInDirectory(List<string> resultAssetPath, List<string> resultLoadPath, string folderPath, bool includeSubdir)
+        {
+            GetFilesInDirectoryInternal(string.Empty, resultAssetPath, resultLoadPath, folderPath, includeSubdir);
+        }
+
+        static void GetFilesInDirectoryInternal(string dirPrefix, List<string> resultAssetPath, List<string> resultLoadPath, string folderPath, bool includeSubdir)
         {
             var dir = new DirectoryInfo(Path.GetFullPath(folderPath));
             var files = dir.GetFiles();
@@ -44,7 +50,7 @@ namespace BundleSystem
                 foreach (var subDir in dir.GetDirectories())
                 {
                     var subdirName = $"{folderPath}/{subDir.Name}";
-                    GetFilesInDirectory(Utility.CombinePath(dirPrefix, subDir.Name), resultAssetPath, resultLoadPath, subdirName, includeSubdir);
+                    GetFilesInDirectoryInternal(Utility.CombinePath(dirPrefix, subDir.Name), resultAssetPath, resultLoadPath, subdirName, includeSubdir);
                 }
             }
         }

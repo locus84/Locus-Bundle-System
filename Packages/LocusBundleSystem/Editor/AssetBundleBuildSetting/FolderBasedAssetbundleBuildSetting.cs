@@ -33,7 +33,7 @@ namespace BundleSystem
                 //collect assets
                 var assetPathes = new List<string>();
                 var loadPathes = new List<string>();
-                Utility.GetFilesInDirectory(string.Empty, assetPathes, loadPathes, folderPath, folderSetting.IncludeSubfolder);
+                Utility.GetFilesInDirectory(assetPathes, loadPathes, folderPath, folderSetting.IncludeSubfolder);
                 if (assetPathes.Count == 0) Debug.LogWarning($"Could not found Any Assets {folderPath} for {folderSetting.BundleName}");
 
                 //make assetbundlebuild
