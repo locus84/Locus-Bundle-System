@@ -13,6 +13,7 @@ namespace BundleSystem
     public static partial class BundleManager
     {
         //instance is almost only for coroutines
+        internal static int UnityMainThreadId { get; private set; }
         private static BundleManagerHelper s_Helper { get; set; }
         private static DebugGuiHelper s_DebugGUI { get; set; }
         public const string ManifestFileName = "Manifest.json";
@@ -67,6 +68,7 @@ namespace BundleSystem
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Setup()
         {
+            UnityMainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += TrackOnSceneLoaded;
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += TrackOnSceneUnLoaded;
 
@@ -90,6 +92,11 @@ namespace BundleSystem
             s_AssetBundles.Clear();
         }
 
+        /// <summary>
+        /// Initialize bundle system and load local bundles
+        /// </summary>
+        /// <param name="altRemoteUrl">alternative remote url, local manifest will be used as default</param>
+        /// <returns>async operation that can be yield return</returns>
         public static BundleAsyncOperation Initialize(string altRemoteUrl = null)
         {
             var result = new BundleAsyncOperation();
@@ -217,7 +224,7 @@ namespace BundleSystem
         /// <summary>
         /// get last cached manifest, to support offline play
         /// </summary>
-        /// <returns></returns>
+        /// <returns>returns true if found, false otherwise</returns>
         public static bool TryGetCachedManifest(out AssetBundleBuildManifest manifest)
         {
             return AssetBundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out manifest);
@@ -406,9 +413,9 @@ namespace BundleSystem
                 if (Caching.IsVersionCached(cachedInfo)) Caching.MarkAsUsed(cachedInfo);
             }
 
-            if (LogMessages) Debug.Log($"CacheUsed Before Cleanup : {Caching.defaultCache.spaceOccupied} bytes");
+            var prevSpace = Caching.defaultCache.spaceOccupied;
             Caching.ClearCache(600); //as we bumped entire list right before clear, let it be just 600
-            if (LogMessages) Debug.Log($"CacheUsed After CleanUp : {Caching.defaultCache.spaceOccupied} bytes");
+            if (LogMessages) Debug.Log($"Cache CleanUp : {prevSpace} -> {Caching.defaultCache.spaceOccupied} bytes");
 
             PlayerPrefs.SetString("CachedManifest", JsonUtility.ToJson(manifest));
             GlobalBundleHash = manifest.GlobalHashString;

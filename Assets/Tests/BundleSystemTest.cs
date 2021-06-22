@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using BundleSystem;
 using UnityEditor;
+using System.Threading.Tasks;
 
 namespace Tests
 {
@@ -65,6 +66,19 @@ namespace Tests
         {
             yield return null;
             Debug.Log("UnityTest");
+        }
+
+        [UnityTest]
+        public IEnumerator TaskAsyncApiTest()
+        {
+            var task = TaskAsyncApiTestFunction();
+            while(!task.IsCompleted) yield return null;
+        }
+
+        private async Task TaskAsyncApiTestFunction()
+        {
+            await Task.Delay(1000);
+            Assert.NotNull(await BundleManager.LoadAsync<Texture>("Local", "TestTexture_Local"));
         }
     }
 }
