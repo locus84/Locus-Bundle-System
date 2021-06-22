@@ -142,7 +142,7 @@ namespace BundleSystem
                 var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 bundleInfo.Dependencies = Utility.CollectBundleDependencies(deps, result.Key);
-                bundleInfo.Hash = result.Value.Hash;
+                bundleInfo.HashString = result.Value.Hash.ToString();
                 bundleInfo.IsLocal = locals.Contains(result.Key);
                 bundleInfo.Size = new FileInfo(result.Value.FileName).Length;
                 manifest.BundleInfos.Add(bundleInfo);
@@ -151,7 +151,7 @@ namespace BundleSystem
             //sort by size
             manifest.BundleInfos.Sort((a, b) => b.Size.CompareTo(a.Size));
             var manifestString = JsonUtility.ToJson(manifest);
-            manifest.GlobalHash = Hash128.Compute(manifestString);
+            manifest.GlobalHashString = Hash128.Compute(manifestString).ToString();
             manifest.BuildTime = DateTime.UtcNow.Ticks;
             manifest.RemoteURL = remoteURL;
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);

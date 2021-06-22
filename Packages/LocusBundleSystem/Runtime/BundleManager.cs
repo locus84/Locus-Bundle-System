@@ -34,7 +34,7 @@ namespace BundleSystem
                 IsLocalBundle = isLocal;
                 LoadPath = loadPath;
                 Bundle = bundle; 
-                Hash = info.Hash;
+                Hash = Hash128.Parse(info.HashString);
                 Dependencies = info.Dependencies;
                 Dependencies.Add(Name);
             }
@@ -169,12 +169,12 @@ namespace BundleSystem
                 bool useLocalBundle =
                     !cacheIsValid || //cache is not valid or...
                     !cachedManifest.TryGetBundleInfo(localBundleInfo.BundleName, out cachedBundleInfo) || //missing bundle or... 
-                    !Caching.IsVersionCached(cachedBundleInfo.AsCached); //is not cached no unusable.
+                    !Caching.IsVersionCached(cachedBundleInfo.ToCachedBundle()); //is not cached no unusable.
 
                 bundleInfoToLoad = useLocalBundle ? localBundleInfo : cachedBundleInfo;
                 var loadPath = Utility.CombinePath(LocalURL, bundleInfoToLoad.BundleName);
 
-                var bundleReq = UnityWebRequestAssetBundle.GetAssetBundle(loadPath, bundleInfoToLoad.Hash);
+                var bundleReq = UnityWebRequestAssetBundle.GetAssetBundle(loadPath, Hash128.Parse(bundleInfoToLoad.HashString));
                 var bundleOp = bundleReq.SendWebRequest();
                 while (!bundleOp.isDone)
                 {
@@ -188,7 +188,7 @@ namespace BundleSystem
                     s_AssetBundles.Add(localBundleInfo.BundleName, loadedBundle);
                     CollectSceneNames(loadedBundle);
 
-                    if (LogMessages) Debug.Log($"Local bundle Loaded - Name : {localBundleInfo.BundleName}, Hash : {bundleInfoToLoad.Hash }");
+                    if (LogMessages) Debug.Log($"Local bundle Loaded - Name : { localBundleInfo.BundleName }, Hash : { bundleInfoToLoad.HashString }");
                 }
                 else
                 {
@@ -197,7 +197,7 @@ namespace BundleSystem
                 }
 
                 bundleReq.Dispose();
-                s_LocalBundles.Add(localBundleInfo.BundleName, localBundleInfo.Hash);
+                s_LocalBundles.Add(localBundleInfo.BundleName, Hash128.Parse(localBundleInfo.HashString));
             }
 
             RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
@@ -286,8 +286,8 @@ namespace BundleSystem
             for (int i = 0; i < bundleInfoList.Count; i++)
             {
                 var bundleInfo = bundleInfoList[i];
-                var uselocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
-                if (!uselocalBundle && !Caching.IsVersionCached(bundleInfo.AsCached))
+                var uselocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == Hash128.Parse(bundleInfo.HashString);
+                if (!uselocalBundle && !Caching.IsVersionCached(bundleInfo.ToCachedBundle()))
                     totalSize += bundleInfo.Size;
             }
 
@@ -334,25 +334,26 @@ namespace BundleSystem
             {
                 result.SetCurrentIndex(i);
                 var bundleInfo = downloadBundleList[i];
+                var bundleHash = Hash128.Parse(bundleInfo.HashString);
 
                 //remove from the set so we can track bundles that should be cleared
                 bundlesToUnload.Remove(bundleInfo.BundleName);
 
-                var islocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleInfo.Hash;
-                var isCached = Caching.IsVersionCached(bundleInfo.AsCached);
+                var islocalBundle = s_LocalBundles.TryGetValue(bundleInfo.BundleName, out var localHash) && localHash == bundleHash;
+                var isCached = Caching.IsVersionCached(bundleInfo.ToCachedBundle());
                 result.SetCachedBundle(isCached);
 
                 var loadURL = islocalBundle ? Utility.CombinePath(LocalURL, bundleInfo.BundleName) : Utility.CombinePath(RemoteURL, bundleInfo.BundleName);
                 if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName}, loadURL {loadURL}, isLocalBundle : {islocalBundle}, isCached {isCached}");
                 LoadedBundle previousBundle;
 
-                if (s_AssetBundles.TryGetValue(bundleInfo.BundleName, out previousBundle) && previousBundle.Hash == bundleInfo.Hash)
+                if (s_AssetBundles.TryGetValue(bundleInfo.BundleName, out previousBundle) && previousBundle.Hash == bundleHash)
                 {
                     if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName} Complete - load skipped");
                 }
                 else
                 {
-                    var bundleReq = islocalBundle ? UnityWebRequestAssetBundle.GetAssetBundle(loadURL) : UnityWebRequestAssetBundle.GetAssetBundle(loadURL, bundleInfo.AsCached);
+                    var bundleReq = islocalBundle ? UnityWebRequestAssetBundle.GetAssetBundle(loadURL) : UnityWebRequestAssetBundle.GetAssetBundle(loadURL, bundleInfo.ToCachedBundle());
                     var operation = bundleReq.SendWebRequest();
                     while (!bundleReq.isDone)
                     {
@@ -397,7 +398,7 @@ namespace BundleSystem
             //we use manifest directly to find out entire list
             for (int i = 0; i < manifest.BundleInfos.Count; i++)
             {
-                var cachedInfo = manifest.BundleInfos[i].AsCached;
+                var cachedInfo = manifest.BundleInfos[i].ToCachedBundle();
                 if (Caching.IsVersionCached(cachedInfo)) Caching.MarkAsUsed(cachedInfo);
             }
 
@@ -406,7 +407,7 @@ namespace BundleSystem
             if (LogMessages) Debug.Log($"CacheUsed After CleanUp : {Caching.defaultCache.spaceOccupied} bytes");
 
             PlayerPrefs.SetString("CachedManifest", JsonUtility.ToJson(manifest));
-            GlobalBundleHash = manifest.GlobalHash.ToString();
+            GlobalBundleHash = manifest.GlobalHashString;
             result.Result = bundleReplaced;
             result.Done(BundleErrorCode.Success);
         }

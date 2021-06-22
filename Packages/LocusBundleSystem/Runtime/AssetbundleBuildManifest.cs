@@ -30,20 +30,14 @@ namespace BundleSystem
         [System.Serializable]
         public struct BundleInfo
         {
-            public CachedAssetBundle AsCached => new CachedAssetBundle(BundleName, Hash);
             public string BundleName;
             public bool IsLocal;
-
-            [SerializeField]
-            string m_HashString;
-            public Hash128 Hash
-            {
-                get => Hash128.Parse(m_HashString);
-                set => m_HashString = value.ToString();
-            }
+            public string HashString;
 
             public List<string> Dependencies;
             public long Size;
+
+            public CachedAssetBundle ToCachedBundle() => new CachedAssetBundle(BundleName, Hash128.Parse(HashString));
         }
 
         public List<BundleInfo> BundleInfos = new List<BundleInfo>();
@@ -54,14 +48,7 @@ namespace BundleSystem
         /// </summary>
         public long BuildTime;
         public string RemoteURL;
-
-        [SerializeField]
-        string m_GlobalHash;
-        public Hash128 GlobalHash
-        {
-            get => Hash128.Parse(m_GlobalHash);
-            set => m_GlobalHash = value.ToString();
-        }
+        public string GlobalHashString;
 
         public bool TryGetBundleInfo(string name, out BundleInfo info)
         {
@@ -74,7 +61,7 @@ namespace BundleSystem
         {
             if(TryGetBundleInfo(name, out var info))
             {
-                hash = info.Hash;
+                hash = Hash128.Parse(info.HashString);
                 return true;
             }
             else

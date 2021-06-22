@@ -52,7 +52,7 @@ namespace BundleSystem
         {
             AssetbundleBuilder.BuildAssetBundles(this);
         }
-        
+
         [ContextMenu("Get Expected Shared Bundles")]
         void GetSharedBundleLog()
         {
