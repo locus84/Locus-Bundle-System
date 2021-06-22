@@ -90,14 +90,14 @@ namespace BundleSystem
             s_AssetBundles.Clear();
         }
 
-        public static BundleAsyncOperation Initialize()
+        public static BundleAsyncOperation Initialize(string altRemoteUrl = null)
         {
             var result = new BundleAsyncOperation();
-            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result));
+            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result, altRemoteUrl));
             return result;
         }
 
-        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result)
+        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, string altRemoteUrl)
         {
             if(Initialized)
             {
@@ -203,7 +203,8 @@ namespace BundleSystem
                 s_LocalBundles.Add(localBundleInfo.BundleName, Hash128.Parse(localBundleInfo.HashString));
             }
 
-            RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
+            var remoteUrl = string.IsNullOrEmpty(altRemoteUrl)? localManifest.RemoteURL : altRemoteUrl;
+            RemoteURL = Utility.CombinePath(remoteUrl, localManifest.BuildTarget);
 #if UNITY_EDITOR
             if (s_EditorDatabaseMap.UseOuputAsRemote)
                 RemoteURL = "file://" + s_EditorDatabaseMap.OutputPath;
