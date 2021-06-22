@@ -1,0 +1,16 @@
+{
+    "name": "MainAssemblyDefinition",
+    "references": [
+        "Unity.Locus.BundleSystem.Editor",
+        "Unity.Locus.BundleSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

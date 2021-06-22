@@ -6,9 +6,16 @@ namespace BundleSystem
 {
     public abstract class AssetbundleBuildSetting : ScriptableObject
     {
-        #pragma warning disable CS0414
-        static bool isDirty;
-        #pragma warning restore CS0414
+#if UNITY_EDITOR
+        static AssetbundleBuildSetting s_ActiveSetting = null;
+        static bool isDirty = true;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void EditorRuntimeInitialize()
+        {
+            RebuildEditorAssetDatabaseMap();
+        }
+
         class DirtyChecker : UnityEditor.AssetPostprocessor
         {
             static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
@@ -18,48 +25,31 @@ namespace BundleSystem
             }
         }
 
-        // Add menu named "My Window" to the Window menu
-        [MenuItem("Window/Asset Management/Select Active Assetbundle Build Setting")]
-        static void SelectActiveSettings()
-        {
-            if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting))
-            {
-                Selection.activeObject = setting;    
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Warning", "No Setting Found", "Okay");
-            }
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        static void EditorRuntimeInitialize()
+        public static void RebuildEditorAssetDatabaseMap()
         {
             if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) 
             {
                 BundleManager.SetEditorDatabase(setting.CreateEditorDatabase());
+                isDirty = false;
             }
         }
 
-        [ContextMenu("Set As Active Setting")]
-        void SetDefaultSetting()
+        public EditorDatabaseMap CreateEditorDatabase()
         {
-            AssetbundleBuildSetting.SetActiveSetting(this);
-        }
-        
-        [ContextMenu("Build With This Setting")]
-        void BuildThisSetting()
-        {
-            AssetbundleBuilder.BuildAssetBundles(this);
-        }
+            var setting = new EditorDatabaseMap();
+            setting.UseAssetDatabase = !EmulateInEditor || !Application.isPlaying;
+            setting.CleanCache = CleanCacheInEditor;
+            setting.UseOuputAsRemote = EmulateWithoutRemoteURL;
+            setting.OutputPath = Utility.CombinePath(OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
 
-        [ContextMenu("Get Expected Shared Bundles")]
-        void GetSharedBundleLog()
-        {
-            AssetbundleBuilder.WriteExpectedSharedBundles(this);
+            var bundleSettings = GetBundleSettings();
+            for (int i = 0; i < bundleSettings.Count; i++)
+            {
+                var currentSetting = bundleSettings[i]; 
+                setting.Append(currentSetting.BundleName, currentSetting.AssetNames, currentSetting.AddressableNames);
+            }
+            return setting;
         }
-
-        static AssetbundleBuildSetting s_ActiveSetting = null;
 
         public static bool TryGetActiveSetting(out AssetbundleBuildSetting setting, bool findIfNotExist = true)
         {
@@ -106,15 +96,20 @@ namespace BundleSystem
             return true;
         }
 
-        public static void SetActiveSetting(AssetbundleBuildSetting setting)
+        public static void SetActiveSetting(AssetbundleBuildSetting setting, bool rebuildDatabaseMap = false)
         {
             var assetPath = UnityEditor.AssetDatabase.GetAssetPath(setting);
             UnityEditor.EditorPrefs.SetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
             s_ActiveSetting = setting;
-            isDirty = true;
+
+            //rebuild map right away
+            if(rebuildDatabaseMap) BundleManager.SetEditorDatabase(setting.CreateEditorDatabase());
+            //if not, make it dirty
+            isDirty = !rebuildDatabaseMap;
         }
 
         public string OutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + OutputFolder;
+#endif
 
         /// <summary>
         /// output folder inside project
@@ -140,23 +135,6 @@ namespace BundleSystem
         public bool UseCacheServer = false;
         public string CacheServerHost;
         public int CacheServerPort;
-
-        public EditorDatabase CreateEditorDatabase()
-        {
-            var setting = new EditorDatabase();
-            setting.UseAssetDatabase = !EmulateInEditor || !Application.isPlaying;
-            setting.CleanCache = CleanCacheInEditor;
-            setting.UseOuputAsRemote = EmulateWithoutRemoteURL;
-            setting.OutputPath = Utility.CombinePath(OutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
-
-            var bundleSettings = GetBundleSettings();
-            for (int i = 0; i < bundleSettings.Count; i++)
-            {
-                var currentSetting = bundleSettings[i]; 
-                setting.Append(currentSetting.BundleName, currentSetting.AssetNames, currentSetting.AddressableNames);
-            }
-            return setting;
-        }
 
         /// <summary>
         /// provide actual assets to bundle

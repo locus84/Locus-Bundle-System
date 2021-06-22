@@ -5,7 +5,7 @@ using UnityEngine;
 #if UNITY_EDITOR
 namespace BundleSystem
 {
-    public class EditorDatabase
+    public class EditorDatabaseMap
     {        
         public bool UseAssetDatabase;
         public bool CleanCache;

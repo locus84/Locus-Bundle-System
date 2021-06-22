@@ -12,10 +12,10 @@ namespace BundleSystem
         public static T[] LoadAll<T>(string bundleName) where T : Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase)
+            if (UseAssetDatabaseMap)
             {
                 EnsureAssetDatabase();
-                var assets = s_EditorDatabase.GetAssetPaths(bundleName);
+                var assets = s_EditorDatabaseMap.GetAssetPaths(bundleName);
                 if (assets.Count == 0) return new T[0];
 
                 var typeExpected = typeof(T);
@@ -41,10 +41,10 @@ namespace BundleSystem
         public static T Load<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabaseMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return null; //asset not exist
                 return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath);
             }
@@ -60,10 +60,10 @@ namespace BundleSystem
         public static T[] LoadWithSubAssets<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabaseMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return new T[0];
                 var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(assetPath);
                 return assets.Select(a => a as T).Where(a => a != null).ToArray();
@@ -80,10 +80,10 @@ namespace BundleSystem
         public static BundleRequest<T> LoadAsync<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
-                var assetPath = s_EditorDatabase.GetAssetPath<T>(bundleName, assetName);
+                var assetPath = s_EditorDatabaseMap.GetAssetPath<T>(bundleName, assetName);
                 if(string.IsNullOrEmpty(assetPath)) return new BundleRequest<T>((T)null); //asset not exist
                 return new BundleRequest<T>(UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath));
             }
@@ -112,10 +112,10 @@ namespace BundleSystem
         {
 #if UNITY_EDITOR
             if (!Application.isPlaying) throw new System.Exception("This function does not support non-playing mode!");
-            if (UseAssetDatabase)
+            if (UseAssetDatabaseMap)
             {
                 EnsureAssetDatabase();
-                var scenePath = s_EditorDatabase.GetScenePath(bundleName, sceneName);
+                var scenePath = s_EditorDatabaseMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return; // scene does not exist
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(mode));
                 return;
@@ -129,10 +129,10 @@ namespace BundleSystem
         {
 #if UNITY_EDITOR
             if (!Application.isPlaying) throw new System.Exception("This function does not support non-playing mode!");
-            if (UseAssetDatabase)
+            if (UseAssetDatabaseMap)
             {
                 EnsureAssetDatabase();
-                var scenePath = s_EditorDatabase.GetScenePath(bundleName, sceneName);
+                var scenePath = s_EditorDatabaseMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
                 return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
             }
@@ -160,10 +160,10 @@ namespace BundleSystem
         public static bool IsAssetExist(string bundleName, string assetName)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
-                return s_EditorDatabase.IsAssetExist(bundleName, assetName);
+                return s_EditorDatabaseMap.IsAssetExist(bundleName, assetName);
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
@@ -176,7 +176,7 @@ namespace BundleSystem
             if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
                 return GameObject.Instantiate(original);
@@ -199,7 +199,7 @@ namespace BundleSystem
             if(parent == null) throw new System.Exception("The parent transform is null");
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
                 return GameObject.Instantiate(original, parent);
@@ -222,7 +222,7 @@ namespace BundleSystem
             if(parent == null) throw new System.Exception("The parent transform is null");
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
                 return GameObject.Instantiate(original, parent, instantiateInWorldSpace);
@@ -244,7 +244,7 @@ namespace BundleSystem
             if(original == null) throw new System.Exception("The gameobject you want instantiate is null");
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
                 return GameObject.Instantiate(original, position, rotation);
@@ -267,7 +267,7 @@ namespace BundleSystem
             if(parent == null) throw new System.Exception("The parent transform is null");
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase) 
+            if (UseAssetDatabaseMap) 
             {
                 EnsureAssetDatabase();
                 return GameObject.Instantiate(original, position, rotation, parent);

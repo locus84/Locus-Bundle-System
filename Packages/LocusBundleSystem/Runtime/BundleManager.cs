@@ -46,12 +46,12 @@ namespace BundleSystem
         static Dictionary<string, LoadedBundle> s_SceneNames = new Dictionary<string, LoadedBundle>();
 
 #if UNITY_EDITOR
-        public static bool UseAssetDatabase { get; private set; } = true;
-        public static void SetEditorDatabase(EditorDatabase map) => s_EditorDatabase = map;
-        private static EditorDatabase s_EditorDatabase;
+        public static bool UseAssetDatabaseMap { get; private set; } = true;
+        public static void SetEditorDatabase(EditorDatabaseMap map) => s_EditorDatabaseMap = map;
+        private static EditorDatabaseMap s_EditorDatabaseMap;
         private static void EnsureAssetDatabase()
         {
-            if(!Application.isPlaying && s_EditorDatabase == null) 
+            if(!Application.isPlaying && s_EditorDatabaseMap == null) 
             {
                 throw new System.Exception("EditorDatabase is null, try call SetEditorDatabase before calling actual api in non-play mode");
             }
@@ -62,8 +62,6 @@ namespace BundleSystem
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
         public static string GlobalBundleHash { get; private set; }
-
-        public static bool AutoReloadBundle { get; private set; } = true;
         public static bool LogMessages { get; set; }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -92,14 +90,14 @@ namespace BundleSystem
             s_AssetBundles.Clear();
         }
 
-        public static BundleAsyncOperation Initialize(bool autoReloadBundle = true)
+        public static BundleAsyncOperation Initialize()
         {
             var result = new BundleAsyncOperation();
-            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result, autoReloadBundle));
+            s_Helper.StartCoroutine(CoInitalizeLocalBundles(result));
             return result;
         }
 
-        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result, bool autoReloadBundle)
+        static IEnumerator CoInitalizeLocalBundles(BundleAsyncOperation result)
         {
             if(Initialized)
             {
@@ -108,14 +106,21 @@ namespace BundleSystem
             }
 
 #if UNITY_EDITOR
-            if (s_EditorDatabase.UseAssetDatabase)
+            if (s_EditorDatabaseMap.UseAssetDatabase)
             {
-                UseAssetDatabase = true;
+                UseAssetDatabaseMap = true;
                 Initialized = true;
+                result.Done(BundleErrorCode.Success);
                 yield break; //use asset database
             }
-            if (s_EditorDatabase.CleanCache) Caching.ClearCache();
-            LocalURL = s_EditorDatabase.OutputPath;
+
+            //now use actual bundle
+            UseAssetDatabaseMap = false;
+
+            //cache control
+            if (s_EditorDatabaseMap.CleanCache) Caching.ClearCache();
+
+            LocalURL = s_EditorDatabaseMap.OutputPath;
 #else
             LocalURL = LocalBundleRuntimePath;
 #endif
@@ -126,8 +131,6 @@ namespace BundleSystem
             {
                 LocalURL = "file://" + LocalURL;
             }
-
-            AutoReloadBundle = autoReloadBundle;
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
@@ -202,8 +205,8 @@ namespace BundleSystem
 
             RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
-            if (s_EditorDatabase.UseOuputAsRemote)
-                RemoteURL = "file://" + s_EditorDatabase.OutputPath;
+            if (s_EditorDatabaseMap.UseOuputAsRemote)
+                RemoteURL = "file://" + s_EditorDatabaseMap.OutputPath;
 #endif
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
@@ -236,7 +239,7 @@ namespace BundleSystem
             }
 
 #if UNITY_EDITOR
-            if (UseAssetDatabase)
+            if (UseAssetDatabaseMap)
             {
                 result.Result = new AssetbundleBuildManifest();
                 result.Done(BundleErrorCode.Success);
@@ -317,7 +320,7 @@ namespace BundleSystem
             }
 
 #if UNITY_EDITOR
-            if(UseAssetDatabase)
+            if(UseAssetDatabaseMap)
             {
                 result.Done(BundleErrorCode.Success);
                 yield break;

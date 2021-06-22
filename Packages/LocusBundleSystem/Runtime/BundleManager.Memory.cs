@@ -151,7 +151,7 @@ namespace BundleSystem
         public static void ReleaseObject(Object obj)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return;
+            if (UseAssetDatabaseMap) return;
 #endif
             UntrackObjectInternal(obj);
         }
@@ -159,7 +159,7 @@ namespace BundleSystem
         public static T TrackObjectWithOwner<T>(GameObject owner, T loaded) where T : Object
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return loaded; //always valid on assetdatabase mode
+            if (UseAssetDatabaseMap) return loaded; //always valid on assetdatabase mode
 #endif
             if (owner.scene.name == null) throw new System.Exception("GameObject is not instantiated one");
             var id = loaded.GetInstanceID();
@@ -175,7 +175,7 @@ namespace BundleSystem
         public static bool UntrackObjectWithOwner(GameObject owner, Object loaded)
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return true; //always valid on assetdatabase mode
+            if (UseAssetDatabaseMap) return true; //always valid on assetdatabase mode
 #endif
             var tupleKey = new TupleObjectKey(owner, loaded);
             if (!s_TrackingOwners.TryGetValue(tupleKey, out var tracking)) return false; //is not tracking combination
@@ -241,7 +241,7 @@ namespace BundleSystem
         private static void Update()
         {
 #if UNITY_EDITOR
-            if (UseAssetDatabase) return; //don't need to run this on assetdatabase mode
+            if (UseAssetDatabaseMap) return; //don't need to run this on assetdatabase mode
 #endif
             //first, owner
             {
@@ -286,8 +286,6 @@ namespace BundleSystem
 
         private static void ReloadBundle(string bundleName)
         {
-            if (!AutoReloadBundle) return;
-
             if (!s_AssetBundles.TryGetValue(bundleName, out var loadedBundle))
             {
                 if (LogMessages) Debug.Log("Bundle To Reload does not exist");
