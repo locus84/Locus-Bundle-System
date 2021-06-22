@@ -60,3 +60,7 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
+# DS_Store
+*.DS_Store
+*link.xml
+*link.xml.meta

@@ -6,13 +6,14 @@ namespace BundleSystem
 {
     public abstract class AssetbundleBuildSetting : ScriptableObject
     {
+        #pragma warning disable CS0414
         static bool isDirty;
-        
+        #pragma warning restore CS0414
         class DirtyChecker : UnityEditor.AssetPostprocessor
         {
-            static void OnPostprocessAllAssets(string[] _, string[] __, string[] ___, string[] ____)
+            static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
             {
-                UnityEngine.Debug.Log("AssetBundleBuildSetting is Dirty");
+                //does not matter, we just need to rebuild editordatabase later on
                 AssetbundleBuildSetting.isDirty = true;
             }
         }
@@ -21,16 +22,22 @@ namespace BundleSystem
         [MenuItem("Window/Asset Management/Select Active Assetbundle Build Setting")]
         static void SelectActiveSettings()
         {
-            Selection.activeObject = AssetbundleBuildSetting.GetActiveSetting();
+            if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting))
+            {
+                Selection.activeObject = setting;    
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Warning", "No Setting Found", "Okay");
+            }
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void EditorRuntimeInitialize()
         {
-            var editorInstance = AssetbundleBuildSetting.GetActiveSetting();
-            if(editorInstance != null) 
+            if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) 
             {
-                BundleManager.SetEditorDatabase(editorInstance.CreateEditorDatabase());
+                BundleManager.SetEditorDatabase(setting.CreateEditorDatabase());
             }
         }
 
@@ -54,9 +61,13 @@ namespace BundleSystem
 
         static AssetbundleBuildSetting s_ActiveSetting = null;
 
-        public static AssetbundleBuildSetting GetActiveSetting(bool findIfNotExist = true)
+        public static bool TryGetActiveSetting(out AssetbundleBuildSetting setting, bool findIfNotExist = true)
         {
-            if (s_ActiveSetting != null) return s_ActiveSetting;
+            if (s_ActiveSetting != null) 
+            {
+                setting = s_ActiveSetting;
+                return true;
+            }
 
             var defaultGUID = UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", string.Empty);
             var assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(defaultGUID);
@@ -67,21 +78,32 @@ namespace BundleSystem
                 if(found != null)
                 {
                     s_ActiveSetting = found;
-                    return s_ActiveSetting;
+                    setting = s_ActiveSetting;
+                    return true;
                 }
             }
             
-            if(!findIfNotExist) return null;
+            if(!findIfNotExist)
+            {
+                setting = default;
+                return false;
+            }
 
             var typeName = typeof(AssetbundleBuildSetting).Name;
             var assetPathes = UnityEditor.AssetDatabase.FindAssets($"t:{typeName}");
 
-            if (assetPathes.Length == 0) return null;
+            if (assetPathes.Length == 0) 
+            {
+                setting = default;
+                return false;
+            }
 
             var guid = UnityEditor.AssetDatabase.GUIDToAssetPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
             UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", guid);
             s_ActiveSetting = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
-            return s_ActiveSetting;
+
+            setting = s_ActiveSetting;
+            return true;
         }
 
         public static void SetActiveSetting(AssetbundleBuildSetting setting)
@@ -92,7 +114,6 @@ namespace BundleSystem
             isDirty = true;
         }
 
-        public abstract List<BundleSetting> GetBundleSettings();
         public string OutputPath => Application.dataPath.Remove(Application.dataPath.Length - 6) + OutputFolder;
 
         /// <summary>
@@ -120,14 +141,6 @@ namespace BundleSystem
         public string CacheServerHost;
         public int CacheServerPort;
 
-        /// <summary>
-        /// check setting is valid
-        /// </summary>
-        public virtual bool IsValid()
-        {
-            return true;
-        }
-
         public EditorDatabase CreateEditorDatabase()
         {
             var setting = new EditorDatabase();
@@ -144,6 +157,16 @@ namespace BundleSystem
             }
             return setting;
         }
+
+        /// <summary>
+        /// provide actual assets to bundle
+        /// </summary>
+        public abstract List<BundleSetting> GetBundleSettings();
+        
+        /// <summary>
+        /// check setting is valid
+        /// </summary>
+        public virtual bool IsValid() => true;
     }
 
     public struct BundleSetting

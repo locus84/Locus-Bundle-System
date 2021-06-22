@@ -13,14 +13,12 @@ namespace BundleSystem
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var settings = AssetbundleBuildSetting.GetActiveSetting();
-            //no instance found
-            if (settings == null) return;
+            if (!AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) return;
             if (Directory.Exists(BundleManager.LocalBundleRuntimePath)) Directory.Delete(BundleManager.LocalBundleRuntimePath, true);
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
 
             //there should be a local bundle
-            var localBundleSourcePath = Utility.CombinePath(settings.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
+            var localBundleSourcePath = Utility.CombinePath(setting.OutputPath, EditorUserBuildSettings.activeBuildTarget.ToString());
             if(!Directory.Exists(localBundleSourcePath))
             {
                 if(Application.isBatchMode)
@@ -32,7 +30,7 @@ namespace BundleSystem
                 {
                     var buildNow = EditorUtility.DisplayDialog("LocusBundleSystem", "Warning - Missing built bundle directory, would you like to build now?", "Yes", "Not now");
                     if(!buildNow) return; //user declined
-                    AssetbundleBuilder.BuildAssetBundles(settings);
+                    AssetbundleBuilder.BuildAssetBundles(setting);
                 }
             }
 

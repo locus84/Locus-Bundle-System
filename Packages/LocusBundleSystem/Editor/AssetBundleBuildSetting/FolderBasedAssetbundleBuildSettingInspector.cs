@@ -117,7 +117,7 @@ namespace BundleSystem
 
             EditorGUI.BeginDisabledGroup(Application.isPlaying);
 
-            if(AssetbundleBuildSetting.GetActiveSetting(false) == setting)
+            if(AssetbundleBuildSetting.TryGetActiveSetting(out var prevSetting, false) && prevSetting == setting)
             {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUI.BeginDisabledGroup(!setting.UseFtp);

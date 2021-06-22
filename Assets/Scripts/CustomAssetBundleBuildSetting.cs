@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using BundleSystem;
 
+#if UNITY_EDITOR
 [CreateAssetMenu(fileName = "AssetbundleBuildSetting.asset", menuName = "Create Custom Assetbundle Build Setting", order = 999)]
 public class CustomAssetBundleBuildSetting : AssetbundleBuildSetting 
 {
@@ -15,7 +16,7 @@ public class CustomAssetBundleBuildSetting : AssetbundleBuildSetting
         AddFilesInFolder("Object", "Assets/TestRemoteResources/Object", false, true, bundleSettings);
         AddFilesInFolder("Object_RootOnly", "Assets/TestRemoteResources/Object_RootOnly", false, false, bundleSettings);
         AddFilesInFolder("Scene", "Assets/TestRemoteResources/Scene", false, true, bundleSettings);
-
+        
         return bundleSettings;
     }
 
@@ -38,3 +39,5 @@ public class CustomAssetBundleBuildSetting : AssetbundleBuildSetting
 
     public override bool IsValid() => true;
 }
+
+#endif

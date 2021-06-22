@@ -46,7 +46,7 @@ namespace BundleSystem
 
                 if(!saved) 
                 {
-                    EditorUtility.DisplayDialog("Failed!", $"User Canceled", "Confirm");
+                    EditorUtility.DisplayDialog("Failed!", "User Canceled", "Confirm");
                     return;
                 }
             }
@@ -99,7 +99,6 @@ namespace BundleSystem
             if (returnCode == ReturnCode.Success)
             {
                 WriteManifestFile(outputPath, setting, results, buildTarget, setting.RemoteURL);
-                WriteLogFile(outputPath, results);
 
                 var linkPath = CopyLinkDotXml(outputPath, AssetDatabase.GetAssetPath(setting));
                 if (!Application.isBatchMode) EditorUtility.DisplayDialog("Build Succeeded!", $"Remote bundle build succeeded, \n {linkPath} updated!", "Confirm");
@@ -115,7 +114,7 @@ namespace BundleSystem
         {
             var linkPath = Utility.CombinePath(outputPath, "link.xml");
             var movePath = Utility.CombinePath(settingPath.Remove(settingPath.LastIndexOf('/')), "link.xml");
-            FileUtil.CopyFileOrDirectory(linkPath, movePath);
+            FileUtil.ReplaceFile(linkPath, movePath);
             AssetDatabase.Refresh();
             return linkPath;
         }
@@ -185,51 +184,6 @@ namespace BundleSystem
 
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             File.WriteAllText(Utility.CombinePath(path, LogExpectedSharedBundleFileName), sb.ToString());
-        }
-
-
-        /// <summary>
-        /// write logs into target path.
-        /// </summary>
-        static void WriteLogFile(string path, IBundleBuildResults bundleResults)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Build Time : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
-            sb.AppendLine();
-
-            for (int i = 0; i < bundleResults.BundleInfos.Count; i++)
-            {
-                var bundleInfo = bundleResults.BundleInfos.ElementAt(i);
-                var writeResult = bundleResults.WriteResults.ElementAt(i);
-                sb.AppendLine($"----File Path : {bundleInfo.Value.FileName}----");
-                var assetDic = new Dictionary<string, ulong>();
-                foreach(var file in writeResult.Value.serializedObjects)
-                {
-                    //skip nonassettype
-                    if (file.serializedObject.fileType == UnityEditor.Build.Content.FileType.NonAssetType) continue;
-
-                    //gather size
-                    var assetPath = AssetDatabase.GUIDToAssetPath(file.serializedObject.guid.ToString());
-                    if (!assetDic.ContainsKey(assetPath))
-                    {
-                        assetDic.Add(assetPath, file.header.size);
-                    } 
-                    else assetDic[assetPath] += file.header.size;
-                }
-
-                //sort by it's size
-                var sortedAssets = assetDic.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key);
-
-                foreach(var asset in sortedAssets)
-                {
-                    sb.AppendLine($"{(asset.Value * 0.000001f).ToString("0.00000").PadLeft(10)} mb - {asset.Key}");
-                }
-
-                sb.AppendLine();
-            }
-
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            File.WriteAllText(Utility.CombinePath(path, LogFileName), sb.ToString());
         }
     }
 }
