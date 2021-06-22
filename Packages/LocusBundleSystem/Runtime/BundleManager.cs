@@ -28,7 +28,7 @@ namespace BundleSystem
             public string LoadPath;
             public UnityWebRequest RequestForReload;
             public bool IsReloading = false;
-            public LoadedBundle(AssetbundleBuildManifest.BundleInfo info, string loadPath, AssetBundle bundle, bool isLocal)
+            public LoadedBundle(AssetBundleBuildManifest.BundleInfo info, string loadPath, AssetBundle bundle, bool isLocal)
             {
                 Name = info.BundleName;
                 IsLocalBundle = isLocal;
@@ -149,14 +149,14 @@ namespace BundleSystem
                 yield break;
             }
 
-            if(!AssetbundleBuildManifest.TryParse(manifestReq.downloadHandler.text, out var localManifest))
+            if(!AssetBundleBuildManifest.TryParse(manifestReq.downloadHandler.text, out var localManifest))
             {
                 result.Done(BundleErrorCode.ManifestParseError);
                 yield break;
             }
 
             //cached version is recent one.
-            var cacheIsValid = AssetbundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out var cachedManifest) 
+            var cacheIsValid = AssetBundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out var cachedManifest) 
                 && cachedManifest.BuildTime > localManifest.BuildTime;
 
             var localBundleInfos = localManifest.BundleInfos.Where(bi => bi.IsLocal).ToArray();
@@ -165,8 +165,8 @@ namespace BundleSystem
             {
                 result.SetCurrentIndex(i);
                 result.SetCachedBundle(true);
-                AssetbundleBuildManifest.BundleInfo bundleInfoToLoad;
-                AssetbundleBuildManifest.BundleInfo cachedBundleInfo = default;
+                AssetBundleBuildManifest.BundleInfo bundleInfoToLoad;
+                AssetBundleBuildManifest.BundleInfo cachedBundleInfo = default;
                 var localBundleInfo = localBundleInfos[i];
 
                 bool useLocalBundle =
@@ -217,19 +217,19 @@ namespace BundleSystem
         /// get last cached manifest, to support offline play
         /// </summary>
         /// <returns></returns>
-        public static bool TryGetCachedManifest(out AssetbundleBuildManifest manifest)
+        public static bool TryGetCachedManifest(out AssetBundleBuildManifest manifest)
         {
-            return AssetbundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out manifest);
+            return AssetBundleBuildManifest.TryParse(PlayerPrefs.GetString("CachedManifest", string.Empty), out manifest);
         }
 
-        public static BundleAsyncOperation<AssetbundleBuildManifest> GetManifest()
+        public static BundleAsyncOperation<AssetBundleBuildManifest> GetManifest()
         {
-            var result = new BundleAsyncOperation<AssetbundleBuildManifest>();
+            var result = new BundleAsyncOperation<AssetBundleBuildManifest>();
             s_Helper.StartCoroutine(CoGetManifest(result));
             return result;
         }
 
-        static IEnumerator CoGetManifest(BundleAsyncOperation<AssetbundleBuildManifest> result)
+        static IEnumerator CoGetManifest(BundleAsyncOperation<AssetBundleBuildManifest> result)
         {
             if (!Initialized)
             {
@@ -241,7 +241,7 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabaseMap)
             {
-                result.Result = new AssetbundleBuildManifest();
+                result.Result = new AssetBundleBuildManifest();
                 result.Done(BundleErrorCode.Success);
                 yield break;
             }
@@ -259,7 +259,7 @@ namespace BundleSystem
             var remoteManifestJson = manifestReq.downloadHandler.text;
             manifestReq.Dispose();
 
-            if (!AssetbundleBuildManifest.TryParse(remoteManifestJson, out var remoteManifest))
+            if (!AssetBundleBuildManifest.TryParse(remoteManifestJson, out var remoteManifest))
             {
                 result.Done(BundleErrorCode.ManifestParseError);
                 yield break;
@@ -275,7 +275,7 @@ namespace BundleSystem
         /// <param name="manifest">manifest you get from GetManifest() function</param>
         /// <param name="subsetNames">names that you interested among full bundle list(optional)</param>
         /// <returns></returns>
-        public static long GetDownloadSize(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
+        public static long GetDownloadSize(AssetBundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
         {
             if (!Initialized)
             {
@@ -303,14 +303,14 @@ namespace BundleSystem
         /// </summary>
         /// <param name="manifest">manifest you get from GetManifest() function</param>
         /// <param name="subsetNames">names that you interested among full bundle list(optional)</param>
-        public static BundleAsyncOperation<bool> DownloadAssetBundles(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
+        public static BundleAsyncOperation<bool> DownloadAssetBundles(AssetBundleBuildManifest manifest, IEnumerable<string> subsetNames = null)
         {
             var result = new BundleAsyncOperation<bool>();
             s_Helper.StartCoroutine(CoDownloadAssetBundles(manifest, subsetNames, result));
             return result;
         }
 
-        static IEnumerator CoDownloadAssetBundles(AssetbundleBuildManifest manifest, IEnumerable<string> subsetNames, BundleAsyncOperation<bool> result)
+        static IEnumerator CoDownloadAssetBundles(AssetBundleBuildManifest manifest, IEnumerable<string> subsetNames, BundleAsyncOperation<bool> result)
         {
             if (!Initialized)
             {

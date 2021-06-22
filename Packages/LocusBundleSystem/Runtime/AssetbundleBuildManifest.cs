@@ -5,9 +5,9 @@ using System.Linq;
 namespace BundleSystem
 {
     [System.Serializable]
-    public class AssetbundleBuildManifest
+    public class AssetBundleBuildManifest
     {
-        public static bool TryParse(string json, out AssetbundleBuildManifest manifest)
+        public static bool TryParse(string json, out AssetBundleBuildManifest manifest)
         {
             if(string.IsNullOrEmpty(json))
             {
@@ -17,7 +17,7 @@ namespace BundleSystem
 
             try
             {
-                manifest = JsonUtility.FromJson<AssetbundleBuildManifest>(json);
+                manifest = JsonUtility.FromJson<AssetBundleBuildManifest>(json);
                 return true;
             }
             catch 

@@ -12,7 +12,7 @@ namespace BundleSystem
     /// <summary>
     /// class that contains actual build functionalities
     /// </summary>
-    public static class AssetbundleBuilder
+    public static class AssetBundleBuilder
     {
         const string LogFileName = "BundleBuildLog.txt";
         const string LogExpectedSharedBundleFileName = "ExpectedSharedBundles.txt";
@@ -37,7 +37,7 @@ namespace BundleSystem
             }
         }
 
-        public static void WriteExpectedSharedBundles(AssetbundleBuildSetting setting)
+        public static void WriteExpectedSharedBundles(AssetBundleBuildSetting setting)
         {
             if(!Application.isBatchMode)
             {
@@ -60,7 +60,7 @@ namespace BundleSystem
             }
         }
 
-        public static void BuildAssetBundles(AssetbundleBuildSetting setting)
+        public static void BuildAssetBundles(AssetBundleBuildSetting setting)
         {
             if(!Application.isBatchMode)
             {
@@ -122,9 +122,9 @@ namespace BundleSystem
         /// <summary>
         /// write manifest into target path.
         /// </summary>
-        static void WriteManifestFile(string path, AssetbundleBuildSetting setting, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
+        static void WriteManifestFile(string path, AssetBundleBuildSetting setting, IBundleBuildResults bundleResults, BuildTarget target, string remoteURL)
         {
-            var manifest = new AssetbundleBuildManifest();
+            var manifest = new AssetBundleBuildManifest();
             manifest.BuildTarget = target.ToString();
 
             //we use unity provided dependency result for final check
@@ -139,7 +139,7 @@ namespace BundleSystem
 
             foreach (var result in bundleResults.BundleInfos)
             {
-                var bundleInfo = new AssetbundleBuildManifest.BundleInfo();
+                var bundleInfo = new AssetBundleBuildManifest.BundleInfo();
                 bundleInfo.BundleName = result.Key;
                 bundleInfo.Dependencies = Utility.CollectBundleDependencies(deps, result.Key);
                 bundleInfo.HashString = result.Value.Hash.ToString();

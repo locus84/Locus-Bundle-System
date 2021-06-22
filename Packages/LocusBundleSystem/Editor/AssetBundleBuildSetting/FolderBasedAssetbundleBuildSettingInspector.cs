@@ -5,8 +5,8 @@ using UnityEditorInternal;
 namespace BundleSystem
 {
     [DisallowMultipleComponent]
-    [CustomEditor(typeof(FolderBasedAssetbundleBuildSetting))]
-    public class FolderBasedAssetbundleBuildSettingInspector : Editor
+    [CustomEditor(typeof(FolderBasedAssetBundleBuildSetting))]
+    public class FolderBasedAssetBundleBuildSettingInspector : Editor
     {
         SerializedProperty m_SettingsProperty;
         SerializedProperty m_OutputPath;
@@ -45,7 +45,7 @@ namespace BundleSystem
             m_FtpUser = serializedObject.FindProperty("FtpUserName");
             m_FtpPass = serializedObject.FindProperty("FtpUserPass");
 
-            var settings = target as FolderBasedAssetbundleBuildSetting;
+            var settings = target as FolderBasedAssetBundleBuildSetting;
 
             list = new ReorderableList(serializedObject, m_SettingsProperty, true, true, true, true)
             {
@@ -73,7 +73,7 @@ namespace BundleSystem
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            var setting = target as FolderBasedAssetbundleBuildSetting;
+            var setting = target as FolderBasedAssetBundleBuildSetting;
 
             list.DoLayoutList();
             bool allowBuild = true;
@@ -117,13 +117,13 @@ namespace BundleSystem
 
             EditorGUI.BeginDisabledGroup(Application.isPlaying);
 
-            if(AssetbundleBuildSetting.TryGetActiveSetting(out var prevSetting, false) && prevSetting == setting)
+            if(AssetBundleBuildSetting.TryGetActiveSetting(out var prevSetting, false) && prevSetting == setting)
             {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUI.BeginDisabledGroup(!setting.UseFtp);
                 if (allowBuild && GUILayout.Button("Upload(FTP)"))
                 {
-                    AssetbundleUploader.UploadAllRemoteFiles(setting);
+                    AssetBundleUploader.UploadAllRemoteFiles(setting);
                     GUIUtility.ExitGUI();
                 }
                 EditorGUI.EndDisabledGroup();

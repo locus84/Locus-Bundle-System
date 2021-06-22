@@ -4,7 +4,7 @@
 
 [![openupm](https://img.shields.io/npm/v/com.locus.bundlesystem?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.locus.bundlesystem/)
 
-Assetbundle system from unity5 will be obsolute in future.\
+AssetBundle system from unity5 will be obsolute in future.\
 Unity Addressables system provides very flexible implementation that fits on any project.\
 But for my experience, there's huge learning curve to get into it.\
 And also, there's no synchronized api which is familier to **Resource.Load** Users.
@@ -54,7 +54,7 @@ This object can be anywhere under Assets folder
 ![BundleSettingInspector](https://user-images.githubusercontent.com/6591432/73616925-a527b580-465c-11ea-8c82-b004e3822d98.png)
 
 1. *Bundle List*
-   - BundleName : Assetbundle's name which you should provide when loading object from AssetBundles.
+   - BundleName : AssetBundle's name which you should provide when loading object from AssetBundles.
    - Included In Player : if true, this bundle will be shipped with player(also can be updated).
    - Folder : Drag or select folder, assets under that folder will be packed into this bundle.
    - Include Subfolder : if true, will search assets from subfolders recurviely, your asset name when loading will be [SubFolderPath]/[AssetName]
@@ -77,9 +77,9 @@ This object can be anywhere under Assets folder
 
 ![FindActiveSetting](https://user-images.githubusercontent.com/6591432/73616927-a5c04c00-465c-11ea-9689-3b8e5cdd4970.png)\
 ![ActiveSetting](https://user-images.githubusercontent.com/6591432/73616924-a527b580-465c-11ea-8cff-a4bfa60faf0a.png)\
-Multiple AssetbundleSettings are supported.\
-You can set one of them as your active AssetbundleBuildSetting(Saved in EditorPref).\
-You can find active AssetbundleBuildSetting in menu.
+Multiple AssetBundleSettings are supported.\
+You can set one of them as your active AssetBundleBuildSetting(Saved in EditorPref).\
+You can find active AssetBundleBuildSetting in menu.
 
 **Auto Optimize Your Bundles**
 

@@ -5,9 +5,9 @@ using UnityEngine;
 
 namespace BundleSystem
 {
-    public class AssetbundleUploader : MonoBehaviour
+    public class AssetBundleUploader : MonoBehaviour
     {
-        public static void UploadAllRemoteFiles(FolderBasedAssetbundleBuildSetting setting)
+        public static void UploadAllRemoteFiles(FolderBasedAssetBundleBuildSetting setting)
         {
             System.Exception exception = null;
             try

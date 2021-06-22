@@ -4,8 +4,8 @@ using UnityEngine;
 using BundleSystem;
 
 #if UNITY_EDITOR
-[CreateAssetMenu(fileName = "AssetbundleBuildSetting.asset", menuName = "Create Custom Assetbundle Build Setting", order = 999)]
-public class CustomAssetBundleBuildSetting : AssetbundleBuildSetting 
+[CreateAssetMenu(fileName = "AssetBundleBuildSetting.asset", menuName = "Create Custom AssetBundle Build Setting", order = 999)]
+public class CustomAssetBundleBuildSetting : AssetBundleBuildSetting 
 {
     public override List<BundleSetting> GetBundleSettings()
     {

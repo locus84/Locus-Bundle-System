@@ -2,34 +2,34 @@
 using UnityEditor;
 using UnityEngine;
 
-public static class AssetbundleBuildSettingMenus
+public static class AssetBundleBuildSettingMenus
 {
-    [MenuItem ("CONTEXT/AssetbundleBuildSetting/Set As Active Setting")]
+    [MenuItem ("CONTEXT/AssetBundleBuildSetting/Set As Active Setting")]
     static void SetDefaultSetting()
     {
-        var setting = Selection.activeObject as AssetbundleBuildSetting;
-        if(setting != null) AssetbundleBuildSetting.SetActiveSetting(setting);
+        var setting = Selection.activeObject as AssetBundleBuildSetting;
+        if(setting != null) AssetBundleBuildSetting.SetActiveSetting(setting);
     }
     
-    [MenuItem ("CONTEXT/AssetbundleBuildSetting/Build With This Setting")]
+    [MenuItem ("CONTEXT/AssetBundleBuildSetting/Build With This Setting")]
     static void BuildThisSetting()
     {
-        var setting = Selection.activeObject as AssetbundleBuildSetting;
-        if(setting != null)  AssetbundleBuilder.BuildAssetBundles(setting);
+        var setting = Selection.activeObject as AssetBundleBuildSetting;
+        if(setting != null)  AssetBundleBuilder.BuildAssetBundles(setting);
     }
 
-    [MenuItem ("CONTEXT/AssetbundleBuildSetting/Get Expected Shared Bundles")]
+    [MenuItem ("CONTEXT/AssetBundleBuildSetting/Get Expected Shared Bundles")]
     static void GetSharedBundleLog()
     {
-        var setting = Selection.activeObject as AssetbundleBuildSetting;
-        if(setting != null) AssetbundleBuilder.WriteExpectedSharedBundles(setting);
+        var setting = Selection.activeObject as AssetBundleBuildSetting;
+        if(setting != null) AssetBundleBuilder.WriteExpectedSharedBundles(setting);
     }
 
     // Add menu named "My Window" to the Window menu
-    [MenuItem("Window/Asset Management/Select Active Assetbundle Build Setting")]
+    [MenuItem("Window/Asset Management/Select Active AssetBundle Build Setting")]
     static void SelectActiveSettings()
     {
-        if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting))
+        if(AssetBundleBuildSetting.TryGetActiveSetting(out var setting))
         {
             Selection.activeObject = setting;    
         }

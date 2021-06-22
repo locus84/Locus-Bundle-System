@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace BundleSystem
 {
-    public abstract class AssetbundleBuildSetting : ScriptableObject
+    public abstract class AssetBundleBuildSetting : ScriptableObject
     {
 #if UNITY_EDITOR
-        static AssetbundleBuildSetting s_ActiveSetting = null;
+        static AssetBundleBuildSetting s_ActiveSetting = null;
         static bool isDirty = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -21,13 +21,13 @@ namespace BundleSystem
             static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
             {
                 //does not matter, we just need to rebuild editordatabase later on
-                AssetbundleBuildSetting.isDirty = true;
+                AssetBundleBuildSetting.isDirty = true;
             }
         }
 
         public static void RebuildEditorAssetDatabaseMap()
         {
-            if(AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) 
+            if(AssetBundleBuildSetting.TryGetActiveSetting(out var setting)) 
             {
                 BundleManager.SetEditorDatabase(setting.CreateEditorDatabase());
                 isDirty = false;
@@ -51,7 +51,7 @@ namespace BundleSystem
             return setting;
         }
 
-        public static bool TryGetActiveSetting(out AssetbundleBuildSetting setting, bool findIfNotExist = true)
+        public static bool TryGetActiveSetting(out AssetBundleBuildSetting setting, bool findIfNotExist = true)
         {
             if (s_ActiveSetting != null) 
             {
@@ -64,7 +64,7 @@ namespace BundleSystem
 
             if (!string.IsNullOrEmpty(assetPath))
             {
-                var found = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>(assetPath);
+                var found = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetBundleBuildSetting>(assetPath);
                 if(found != null)
                 {
                     s_ActiveSetting = found;
@@ -79,7 +79,7 @@ namespace BundleSystem
                 return false;
             }
 
-            var typeName = typeof(AssetbundleBuildSetting).Name;
+            var typeName = typeof(AssetBundleBuildSetting).Name;
             var assetPathes = UnityEditor.AssetDatabase.FindAssets($"t:{typeName}");
 
             if (assetPathes.Length == 0) 
@@ -90,13 +90,13 @@ namespace BundleSystem
 
             var guid = UnityEditor.AssetDatabase.GUIDToAssetPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
             UnityEditor.EditorPrefs.GetString("LocusActiveBundleSetting", guid);
-            s_ActiveSetting = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
+            s_ActiveSetting = UnityEditor.AssetDatabase.LoadAssetAtPath<AssetBundleBuildSetting>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetPathes[0]));
 
             setting = s_ActiveSetting;
             return true;
         }
 
-        public static void SetActiveSetting(AssetbundleBuildSetting setting, bool rebuildDatabaseMap = false)
+        public static void SetActiveSetting(AssetBundleBuildSetting setting, bool rebuildDatabaseMap = false)
         {
             var assetPath = UnityEditor.AssetDatabase.GetAssetPath(setting);
             UnityEditor.EditorPrefs.SetString("LocusActiveBundleSetting", UnityEditor.AssetDatabase.AssetPathToGUID(assetPath));
@@ -115,7 +115,7 @@ namespace BundleSystem
         /// output folder inside project
         /// </summary>
         [SerializeField]
-        [Tooltip("Assetbundle build output folder")]
+        [Tooltip("AssetBundle build output folder")]
         public string OutputFolder = "AssetBundles";
 
         [Tooltip("Remote URL for downloading remote bundles")]

@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -10,23 +9,23 @@ namespace Tests
 {
     public class BundleSystemTest
     {
-        AssetbundleBuildSetting m_PrevActiveSettingCache = null;
+        AssetBundleBuildSetting m_PrevActiveSettingCache = null;
 
         [UnitySetUp]
         public IEnumerator InitializeTestSetup()
         {
             //no setting
-            if(!AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) yield break;
+            if(!AssetBundleBuildSetting.TryGetActiveSetting(out var setting)) yield break;
 
             //load target test setting
-            var toTest = AssetDatabase.LoadAssetAtPath<AssetbundleBuildSetting>("Assets/TestRemoteResources/AssetbundleBuildSetting.asset");
+            var toTest = AssetDatabase.LoadAssetAtPath<AssetBundleBuildSetting>("Assets/TestRemoteResources/AssetBundleBuildSetting.asset");
 
             if(toTest != setting)
             {
                 //cache prev setting to recover
                 m_PrevActiveSettingCache = setting;
                 //make it active setting
-                AssetbundleBuildSetting.SetActiveSetting(toTest, true);
+                AssetBundleBuildSetting.SetActiveSetting(toTest, true);
             }
 
             //log messages
@@ -47,7 +46,7 @@ namespace Tests
             if(m_PrevActiveSettingCache != null)
             {
                 //restore setting
-                AssetbundleBuildSetting.SetActiveSetting(m_PrevActiveSettingCache);
+                AssetBundleBuildSetting.SetActiveSetting(m_PrevActiveSettingCache);
             }
         }
 
@@ -62,7 +61,7 @@ namespace Tests
         }
 
         [UnityTest]
-        public IEnumerator ASyncApiTest()
+        public IEnumerator AsyncApiTest()
         {
             yield return null;
             Debug.Log("UnityTest");

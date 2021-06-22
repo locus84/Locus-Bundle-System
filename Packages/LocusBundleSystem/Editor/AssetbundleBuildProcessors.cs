@@ -7,13 +7,13 @@ using UnityEditor.Build.Reporting;
 
 namespace BundleSystem
 {
-    public class AssetbundleBuildProcessors : IPreprocessBuildWithReport, IPostprocessBuildWithReport
+    public class AssetBundleBuildProcessors : IPreprocessBuildWithReport, IPostprocessBuildWithReport
     {
         public int callbackOrder => 999;
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            if (!AssetbundleBuildSetting.TryGetActiveSetting(out var setting)) return;
+            if (!AssetBundleBuildSetting.TryGetActiveSetting(out var setting)) return;
             if (Directory.Exists(BundleManager.LocalBundleRuntimePath)) Directory.Delete(BundleManager.LocalBundleRuntimePath, true);
             if (!Directory.Exists(Application.streamingAssetsPath)) Directory.CreateDirectory(Application.streamingAssetsPath);
 
@@ -30,12 +30,12 @@ namespace BundleSystem
                 {
                     var buildNow = EditorUtility.DisplayDialog("LocusBundleSystem", "Warning - Missing built bundle directory, would you like to build now?", "Yes", "Not now");
                     if(!buildNow) return; //user declined
-                    AssetbundleBuilder.BuildAssetBundles(setting);
+                    AssetBundleBuilder.BuildAssetBundles(setting);
                 }
             }
 
             //load manifest and make local bundle list
-            var manifest = JsonUtility.FromJson<AssetbundleBuildManifest>(File.ReadAllText(Utility.CombinePath(localBundleSourcePath, BundleManager.ManifestFileName)));
+            var manifest = JsonUtility.FromJson<AssetBundleBuildManifest>(File.ReadAllText(Utility.CombinePath(localBundleSourcePath, BundleManager.ManifestFileName)));
             var localBundleNames = manifest.BundleInfos.Where(bi => bi.IsLocal).Select(bi => bi.BundleName).ToList();
 
             Directory.CreateDirectory(BundleManager.LocalBundleRuntimePath);
