@@ -8,10 +8,10 @@ namespace BundleSystem{
     /// this class is for simulating assetbundle request in editor.
     /// using this class we can provide unified structure.
     /// </summary>
-    public class BundleRequest<T> : CustomYieldInstruction, IAwaiter<T>, System.IDisposable where T : Object
+    public class BundleRequest<T> : CustomYieldInstruction, IAwaiter<BundleRequest<T>>, System.IDisposable where T : Object
     {
-        AssetBundleRequest mRequest;
-        T mLoadedAsset;
+        AssetBundleRequest m_Request;
+        T m_LoadedAsset;
 
         /// <summary>
         /// actual assetbundle request warpper
@@ -19,7 +19,7 @@ namespace BundleSystem{
         /// <param name="request"></param>
         public BundleRequest(AssetBundleRequest request)
         {
-            mRequest = request;
+            m_Request = request;
         }
 
         /// <summary>
@@ -28,35 +28,35 @@ namespace BundleSystem{
         /// <param name="loadedAsset"></param>
         public BundleRequest(T loadedAsset)
         {
-            mLoadedAsset = loadedAsset;
+            m_LoadedAsset = loadedAsset;
         }
 
         //provide similar apis
-        public override bool keepWaiting => mRequest == null ? false : !mRequest.isDone;
-        public T Asset => mRequest == null ? mLoadedAsset : mRequest.asset as T;
-        public float Progress => mRequest == null ? 1f : mRequest.progress;
-        public bool IsCompleted => mRequest == null ? true : mRequest.isDone;
+        public override bool keepWaiting => m_Request == null ? false : !m_Request.isDone;
+        public T Asset => m_Request == null ? m_LoadedAsset : m_Request.asset as T;
+        public float Progress => m_Request == null ? 1f : m_Request.progress;
+        public bool IsCompleted => m_Request == null ? true : m_Request.isDone;
 
         public void Dispose()
         {
-            if(mRequest != null)
+            if(m_Request != null)
             {
-                if(mRequest.isDone)
+                if(m_Request.isDone)
                 {
-                    if (mRequest.asset != null) BundleManager.ReleaseObject(mRequest.asset);
+                    if (m_Request.asset != null) BundleManager.ReleaseObject(m_Request.asset);
                 }
                 else
                 {
-                    mRequest.completed += op =>
+                    m_Request.completed += op =>
                     {
-                        if(mRequest.asset != null) BundleManager.ReleaseObject(mRequest.asset);
+                        if(m_Request.asset != null) BundleManager.ReleaseObject(m_Request.asset);
                     };
                 }
             }
         }
 
-        public T GetResult() => Asset;
-        public IAwaiter<T> GetAwaiter() => this;
+        BundleRequest<T> IAwaiter<BundleRequest<T>>.GetResult() => this;
+        public IAwaiter<BundleRequest<T>> GetAwaiter() => this;
 
         public void UnsafeOnCompleted(System.Action continuation)
         {
@@ -71,32 +71,68 @@ namespace BundleSystem{
             }
 
             if(IsCompleted) continuation.Invoke();
-            else mRequest.completed += op => continuation.Invoke();
+            else m_Request.completed += op => continuation.Invoke();
         }
+
+    }
+
+    public class BundleSceneRequest : CustomYieldInstruction, IAwaiter<BundleSceneRequest>
+    {
+        AsyncOperation m_AsyncOperation;
+
+        /// <summary>
+        /// actual assetbundle request warpper
+        /// </summary>
+        /// <param name="request"></param>
+        public BundleSceneRequest(AsyncOperation operation)
+        {
+            m_AsyncOperation = operation;
+        }
+
+        bool IAwaiter<BundleSceneRequest>.IsCompleted => m_AsyncOperation.isDone;
+
+        public override bool keepWaiting => !m_AsyncOperation.isDone;
+        public float Progress => m_AsyncOperation.progress;
+
+        BundleSceneRequest IAwaiter<BundleSceneRequest>.GetResult() => this;
+        public IAwaiter<BundleSceneRequest> GetAwaiter() => this;
+
+        public void OnCompleted(System.Action continuation)
+        {
+            if(Thread.CurrentThread.ManagedThreadId != BundleManager.UnityMainThreadId) 
+            {
+                throw new System.Exception("Should be awaited in UnityMainThread"); 
+            }
+
+            if(m_AsyncOperation.isDone) continuation.Invoke();
+            else m_AsyncOperation.completed += op => continuation.Invoke();
+        }
+
+        public void UnsafeOnCompleted(System.Action continuation) => OnCompleted(continuation);
     }
 
 
     /// <summary>
     /// assetbundle update
     /// </summary>
-    public class BundleAsyncOperation<T> : BundleAsyncOperationBase, IAwaiter<T>
+    public class BundleAsyncOperation<T> : BundleAsyncOperationBase, IAwaiter<BundleAsyncOperation<T>>
     {
         public T Result { get; internal set; }
 
         //awaiter implementations
-        bool IAwaiter<T>.IsCompleted => IsDone;
-        T IAwaiter<T>.GetResult() => Result;
-        public IAwaiter<T> GetAwaiter() => this;
+        bool IAwaiter<BundleAsyncOperation<T>>.IsCompleted => IsDone;
+        BundleAsyncOperation<T> IAwaiter<BundleAsyncOperation<T>>.GetResult() => this;
+        public IAwaiter<BundleAsyncOperation<T>> GetAwaiter() => this;
         void INotifyCompletion.OnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
         void ICriticalNotifyCompletion.UnsafeOnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
     }
 
-    public class BundleAsyncOperation : BundleAsyncOperationBase, IAwaiter
+    public class BundleAsyncOperation : BundleAsyncOperationBase, IAwaiter<BundleAsyncOperation>
     {
         //awaiter implementations
-        bool IAwaiter.IsCompleted => IsDone;
-        void IAwaiter.GetResult() {}
-        public IAwaiter GetAwaiter() => this;
+        bool IAwaiter<BundleAsyncOperation>.IsCompleted => IsDone;
+        BundleAsyncOperation IAwaiter<BundleAsyncOperation>.GetResult() => this;
+        public IAwaiter<BundleAsyncOperation> GetAwaiter() => this;
         void INotifyCompletion.OnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
         void ICriticalNotifyCompletion.UnsafeOnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
     }
@@ -164,13 +200,6 @@ namespace BundleSystem{
         NotInitialized = 1,
         NetworkError = 2,
         ManifestParseError = 3,
-    }
-
-    public interface IAwaiter : ICriticalNotifyCompletion
-    {
-        bool IsCompleted { get; }
-
-        void GetResult();
     }
     
     public interface IAwaiter<out TResult> : ICriticalNotifyCompletion

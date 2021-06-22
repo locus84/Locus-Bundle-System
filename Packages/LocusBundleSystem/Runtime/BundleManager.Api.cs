@@ -125,7 +125,7 @@ namespace BundleSystem
             SceneManager.LoadScene(Path.GetFileName(sceneName), mode);
         }
         
-        public static AsyncOperation LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)
+        public static BundleSceneRequest LoadSceneAsync(string bundleName, string sceneName, LoadSceneMode mode)
         {
 #if UNITY_EDITOR
             if (!Application.isPlaying) throw new System.Exception("This function does not support non-playing mode!");
@@ -134,7 +134,8 @@ namespace BundleSystem
                 EnsureAssetDatabase();
                 var scenePath = s_EditorDatabaseMap.GetScenePath(bundleName, sceneName);
                 if(string.IsNullOrEmpty(scenePath)) return null; // scene does not exist
-                return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
+                var editorAop = UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(mode));
+                return new BundleSceneRequest(editorAop);
             }
 #endif
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
@@ -154,7 +155,7 @@ namespace BundleSystem
                 aop.completed += op => ReleaseBundleInternal(foundBundle, 1);
             }
 
-            return aop;
+            return new BundleSceneRequest(aop);
         }
 
         public static bool IsAssetExist(string bundleName, string assetName)
