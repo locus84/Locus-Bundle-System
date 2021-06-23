@@ -63,7 +63,7 @@ namespace BundleSystem
             public string BundleName;
             [Tooltip("Should this bundle included in player?")]
             public bool IncludedInPlayer = false;
-            public FolderReference Folder;
+            public GuidReference Folder;
             [Tooltip("Should include subfolder?")]
             public bool IncludeSubfolder = false;
             [Tooltip("Works only for remote bundle, true for LMZA, false for LZ4")]
