@@ -5,183 +5,128 @@ using UnityEngine.Networking;
 
 namespace BundleSystem
 {
+    public struct TrackHandle
+    {
+        public readonly int Id;
+        public TrackHandle(int id) => Id = id;
+        public bool IsValid() => Id != 0;
+        public bool IsAlive() => BundleManager.IsTrackHandleAlive(Id);
+        public bool IsValidAndAlive() => IsValid() && IsAlive();
+    }
+
     public static partial class BundleManager
     {
-        public class TrackInfo 
-        {
-            public Component OwnerComponent;
-            public Dictionary<string, int> BundleRefCountDic = new Dictionary<string, int>();
-        }
+        static int s_LastTrackId = 0;
+        static IndexedDictionary<int, TrackInfo> s_TrackInfoDict = new IndexedDictionary<int, TrackInfo>(10);
+        static Dictionary<int, int> s_TrackInstanceTransformDict = new Dictionary<int, int>();
 
-        public struct LoadInfo 
-        {
-            public string BundleName;
-            public int LoadedFrame;
-        }
-        
-        private static Dictionary<UnityEngine.Object, string> s_BundleNameDic = new Dictionary<Object, string>();
-        private static Stack<TrackInfo> s_TrackInfoPool = new Stack<TrackInfo>();
-        private static List<TrackInfo> s_TrackInfoList = new List<TrackInfo>();
-        private static List<LoadInfo> s_LoadInfoList = new List<LoadInfo>();
-        private static List<BundleAsyncOperation> s_AsyncLoadInfo = new List<BundleAsyncOperation>();
-        
-        //weak refernce pool to reduce allocation
-        private static Stack<System.WeakReference> s_WeakRefPool = new Stack<System.WeakReference>(50);
         //bundle ref count
         private static Dictionary<string, int> s_BundleRefCounts = new Dictionary<string, int>(10);
-        //bundle ref count
-        private static Dictionary<string, int> s_BundleDirectUseCount = new Dictionary<string, int>(10);
 
-        //obect weak reference tracking
-        private static IndexedDictionary<int, TrackingObject> s_TrackingObjects = new IndexedDictionary<int, TrackingObject>(50);
-        //game object destroy tracking, as well as owner tracking(with original object)
-        private static IndexedDictionary<TupleObjectKey, TrackingOwner> s_TrackingOwners = new IndexedDictionary<TupleObjectKey, TrackingOwner>(50);
-        //game object tracking(only with loaded bundle)
-        private static IndexedList<TrackingGameObject> s_TrackingGameObjects = new IndexedList<TrackingGameObject>(50);
-
-        private struct TrackingObject //bundle with refcount, when zero, try to unload directly
+        public static void ChangeOwner(TrackHandle handle, Component newOwner)
         {
-            public System.WeakReference WeakRef;
-            public int RefCount;
-            public LoadedBundle Bundle;
-            public TrackingObject(Object obj, LoadedBundle loadedBundle)
-            {
-                if(s_WeakRefPool.Count > 0)
-                {
-                    WeakRef = s_WeakRefPool.Pop();
-                    WeakRef.Target = obj;
-                }
-                else
-                {
-                    WeakRef = new System.WeakReference(obj);
-                }
-                Bundle = loadedBundle;
-                RefCount = 1;
-            }
+            if(!handle.IsValidAndAlive()) throw new System.Exception("Handle is not valid or already not tracked");
+            var exitingTrackInfo = s_TrackInfoDict[handle.Id];
+            exitingTrackInfo.Owner = newOwner;
+            s_TrackInfoDict[handle.Id] = exitingTrackInfo;
         }
 
-        private struct TrackingOwner //has original bundle so release it when destroyed
+        internal static bool IsTrackHandleAlive(int id)
         {
-            public GameObject Owner;
-            public Object Child; //should own Object reference otherwise it'll be forgotton.
-            public TrackingOwner(GameObject owner, Object child)
-            {
-                Owner = owner;
-                Child = child;
-            }
+            if(id == 0) return false;
+            return s_TrackInfoDict.ContainsKey(id);
         }
 
-        private struct TrackingGameObject //no original asset so it just depends directly on bundle
+        public static TrackHandle TrackExplicit(Object objectToTrack, TrackHandle referenceHandle, Component newOwner = null)
         {
-            public GameObject GameObject;
-            public LoadedBundle Bundle;
-            public TrackingGameObject(GameObject obj, LoadedBundle loadedBundle)
+            if(!referenceHandle.IsValidAndAlive()) throw new System.Exception("Handle is not valid or already not tracked");
+
+            var exitingTrackInfo = s_TrackInfoDict[referenceHandle.Id];
+            var newTrackId = ++s_LastTrackId;
+            if(newOwner == null) newOwner = exitingTrackInfo.Owner;
+
+            s_TrackInfoDict.Add(newTrackId, new TrackInfo()
             {
-                GameObject = obj;
-                Bundle = loadedBundle;
-            }
+                BundleName = exitingTrackInfo.BundleName,
+                Tracked = objectToTrack,
+                Owner = newOwner
+            });
+
+            return new TrackHandle(newTrackId);
         }
 
-        private static void TrackObjectInternal(Object obj, LoadedBundle loadedBundle)
+        static bool TryGetTrackIdInternal(Transform trans, out int trackId)
         {
-            var id = obj.GetInstanceID();
-            if (s_TrackingObjects.TryGetValue(id, out var trackingObject))
+            do
             {
-                trackingObject.RefCount++;
+                if(s_TrackInstanceTransformDict.TryGetValue(trans.GetInstanceID(), out trackId)) return true;
+                trans = trans.parent;
             }
-            else
-            {
-                trackingObject = new TrackingObject(obj, loadedBundle);
-                RetainBundleInternal(trackingObject.Bundle, 1);
-            }
-            s_TrackingObjects[id] = trackingObject; //update
+            while(trans != null);
+
+            trackId = default;
+            return false;
         }
 
-        private static void TrackObjectsInternal<T>(T[] objs, LoadedBundle loadedBundle) where T : Object
+        public struct TrackInfo
         {
-            int retainCount = 0;
+            public Component Owner;
+            public Object Tracked;
+            public string BundleName;
+            public bool InstanceTrack;
+        }
+
+        private static TrackHandle TrackObjectInternal(Component owner, Object obj, LoadedBundle loadedBundle, bool instanceTracking)
+        {
+            var trackId = ++s_LastTrackId;
+            s_TrackInfoDict.Add(trackId, new TrackInfo(){
+                BundleName = loadedBundle.Name,
+                Owner = owner,
+                Tracked = obj,
+                InstanceTrack = instanceTracking
+            });
+
+            if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
+
+            RetainBundleInternal(loadedBundle, 1);
+            return new TrackHandle(trackId);
+        }
+
+        private static TrackHandle[] TrackObjectsInternal<T>(Component owner, T[] objs, LoadedBundle loadedBundle) where T : Object
+        {
+            var result = new TrackHandle[objs.Length];
             for(int i = 0; i < objs.Length; i++)
             {
-                var id = objs[0].GetInstanceID();
-                if (s_TrackingObjects.TryGetValue(id, out var trackingObject))
+                var obj = objs[i];
+                var trackId = ++s_LastTrackId;
+                s_TrackInfoDict.Add(trackId, new TrackInfo()
                 {
-                    trackingObject.RefCount++;
-                }
-                else
-                {
-                    trackingObject = new TrackingObject(objs[0], loadedBundle);
-                    retainCount++;
-                    
-                }
-                s_TrackingObjects[id] = trackingObject; //update
+                    BundleName = loadedBundle.Name,
+                    Owner = owner,
+                    Tracked = objs[i],
+                    InstanceTrack = false
+                });
             }
-            if(retainCount > 0) RetainBundleInternal(loadedBundle, retainCount); //do once
+
+            if(objs.Length > 0) RetainBundleInternal(loadedBundle, objs.Length); //do once
+
+            return result;
         }
 
-        private static void UntrackObjectInternal(Object obj)
+        private static void UntrackObjectInternal(TrackHandle handle)
         {
-            var id = obj.GetInstanceID();
-            if (s_TrackingObjects.TryGetValue(id, out var trackingObject))
-            {
-                trackingObject.RefCount--;
-                if (trackingObject.RefCount <= 0)
-                {
-                    s_TrackingObjects.Remove(id);
-                    ReleaseBundleInternal(trackingObject.Bundle, 1);
-                    s_WeakRefPool.Push(trackingObject.WeakRef);
-                }
-                else
-                {
-                    s_TrackingObjects[id] = trackingObject; //update
-                }
-            }
-            else
-            {
-                Debug.LogWarning("Object is not tracked - maybe already disposed");
-            }
-        }
+            if(!handle.IsValid()) return;
+            if(!s_TrackInfoDict.TryGetValue(handle.Id, out var trackInfo)) return;
 
-        private static void TrackIndepenantInternal(LoadedBundle loadedBundle, GameObject go)
-        {
-            if (go.scene.name == null) throw new System.Exception("GameObject is not instantiated one");
-            s_TrackingGameObjects.Add(new TrackingGameObject(go, loadedBundle));
-            RetainBundleInternal(loadedBundle, 1);
-        }
+            //remove anyway
+            s_TrackInfoDict.Remove(handle.Id);
 
-        public static void ReleaseObject(Object obj)
-        {
-#if UNITY_EDITOR
-            if (UseAssetDatabaseMap) return;
-#endif
-            UntrackObjectInternal(obj);
-        }
+            if(trackInfo.InstanceTrack) s_TrackInstanceTransformDict.Remove(trackInfo.Owner.GetInstanceID());
+            //find related bundle
+            if(!s_AssetBundles.TryGetValue(trackInfo.BundleName, out var loadedBundle)) return;
 
-        public static T TrackObjectWithOwner<T>(GameObject owner, T loaded) where T : Object
-        {
-#if UNITY_EDITOR
-            if (UseAssetDatabaseMap) return loaded; //always valid on assetdatabase mode
-#endif
-            if (owner.scene.name == null) throw new System.Exception("GameObject is not instantiated one");
-            var id = loaded.GetInstanceID();
-            if (!s_TrackingObjects.TryGetValue(id, out var tracking)) throw new System.Exception("Original Object is not tracked");
-            var tupleKey = new TupleObjectKey(owner, loaded);
-            if (s_TrackingOwners.ContainsKey(tupleKey)) throw new System.Exception("Already Tracked by this combination");
-            s_TrackingOwners.Add(tupleKey, new TrackingOwner(owner, loaded));
-            tracking.RefCount++; //increase refCount
-            s_TrackingObjects[id] = tracking;
-            return loaded;
-        }
-
-        public static bool UntrackObjectWithOwner(GameObject owner, Object loaded)
-        {
-#if UNITY_EDITOR
-            if (UseAssetDatabaseMap) return true; //always valid on assetdatabase mode
-#endif
-            var tupleKey = new TupleObjectKey(owner, loaded);
-            if (!s_TrackingOwners.TryGetValue(tupleKey, out var tracking)) return false; //is not tracking combination
-            s_TrackingOwners.Remove(tupleKey);
-            UntrackObjectInternal(tracking.Child);
-            return true;
+            //release
+            ReleaseBundleInternal(loadedBundle, 1);
         }
 
         static List<GameObject> s_SceneRootObjectCache = new List<GameObject>();
@@ -193,7 +138,10 @@ namespace BundleSystem
                 RetainBundleInternal(loadedBundle, 1);
                 scene.GetRootGameObjects(s_SceneRootObjectCache);
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
-                    TrackIndepenantInternal(loadedBundle, s_SceneRootObjectCache[i]);
+                {
+                    var owner = s_SceneRootObjectCache[i].transform;
+                    TrackObjectInternal(owner, null, loadedBundle, true);
+                }
                 s_SceneRootObjectCache.Clear();
             }
         }
@@ -209,10 +157,6 @@ namespace BundleSystem
 
         private static void RetainBundleInternal(LoadedBundle bundle, int count)
         {
-#if UNITY_EDITOR
-            if (s_BundleDirectUseCount.ContainsKey(bundle.Name)) s_BundleDirectUseCount[bundle.Name] += count;
-            else s_BundleDirectUseCount.Add(bundle.Name, count);
-#endif
             for (int i = 0; i < bundle.Dependencies.Count; i++)
             {
                 var refBundleName = bundle.Dependencies[i];
@@ -223,16 +167,17 @@ namespace BundleSystem
 
         private static void ReleaseBundleInternal(LoadedBundle bundle, int count)
         {
-#if UNITY_EDITOR
-            s_BundleDirectUseCount[bundle.Name] -= count;
-#endif
             for (int i = 0; i < bundle.Dependencies.Count; i++)
             {
                 var refBundleName = bundle.Dependencies[i];
                 if (s_BundleRefCounts.ContainsKey(refBundleName))
                 {
-                    s_BundleRefCounts[refBundleName] -= count;
-                    if (s_BundleRefCounts[refBundleName] <= 0) ReloadBundle(refBundleName);
+                    s_BundleRefCounts[refBundleName] = count;
+                    if (s_BundleRefCounts[refBundleName] <= 0) 
+                    {
+                        s_BundleRefCounts.Remove(refBundleName);
+                        ReloadBundle(refBundleName);
+                    }
                 }
             }
         }
@@ -240,45 +185,15 @@ namespace BundleSystem
         //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
         private static void Update()
         {
-#if UNITY_EDITOR
-            if (UseAssetDatabaseMap) return; //don't need to run this on assetdatabase mode
-#endif
             //first, owner
             {
-                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackingOwners.Count);
+                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackInfoDict.Count);
                 for(int i = 0; i < trackCount; i++)
                 {
-                    if (s_TrackingOwners.TryGetNext(out var kv) && kv.Value.Owner == null)
+                    if (s_TrackInfoDict.TryGetNext(out var kv) && kv.Value.Owner == null)
                     {
-                        s_TrackingOwners.Remove(kv.Key);
-                        UntrackObjectInternal(kv.Value.Child);
-                    }
-                }
-            }
-
-            //second, objects(so owner can release ref)
-            {
-                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackingObjects.Count);
-                for (int i = 0; i < trackCount; i++)
-                {
-                    if (s_TrackingObjects.TryGetNext(out var kv) && !kv.Value.WeakRef.IsAlive)
-                    {
-                        s_TrackingObjects.Remove(kv.Key);
-                        ReleaseBundleInternal(kv.Value.Bundle, 1);
-                        s_WeakRefPool.Push(kv.Value.WeakRef);
-                    }
-                }
-            }
-
-            //next, sole object
-            {
-                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackingGameObjects.Count);
-                for (int i = 0; i < trackCount; i++)
-                {
-                    if (s_TrackingGameObjects.TryGetNext(out var trackInfo) && trackInfo.GameObject == null)
-                    {
-                        s_TrackingGameObjects.RemoveAt(s_TrackingGameObjects.CurrentIndex);
-                        ReleaseBundleInternal(trackInfo.Bundle, 1);
+                        s_TrackInfoDict.Remove(kv.Key);
+                        //release bundle
                     }
                 }
             }

@@ -436,7 +436,5 @@ namespace BundleSystem
                 BundleManager.OnDestroy();
             }
         }
-
-        
     }
 }

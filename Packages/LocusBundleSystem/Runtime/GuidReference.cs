@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BundleSystem
 {
     [System.Serializable]
-    public class FolderReference
+    public class GuidReference
     {
         public string guid;
     }
@@ -14,8 +14,8 @@ namespace BundleSystem
 namespace BundleSystem
 {
     using UnityEditor;
-    [CustomPropertyDrawer(typeof(FolderReference))]
-    public class FolderReferencePropertyDrawer : PropertyDrawer
+    [CustomPropertyDrawer(typeof(GuidReference))]
+    public class GuidReferencePropertyDrawer : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
