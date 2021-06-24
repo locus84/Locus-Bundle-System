@@ -95,7 +95,7 @@ namespace BundleSystem
 
             if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
 
-            RetainBundleInternal(loadedBundle, 1);
+            RetainBundleInternal(loadedBundle);
             return new TrackHandle(trackId);
         }
 
@@ -138,7 +138,6 @@ namespace BundleSystem
             //find related bundle
             if(s_AssetBundles.TryGetValue(info.BundleName, out var loadedBundle))
             {
-                 
                 RetainBundleInternal(loadedBundle);
             }
 
@@ -211,7 +210,7 @@ namespace BundleSystem
 
             if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
 
-            ReleaseBundleInternalEditor(bundleName);
+            RetainBundleInternalEditor(bundleName);
 
             return new TrackHandle(trackId);
         }
@@ -269,7 +268,7 @@ namespace BundleSystem
             //if scene is from assetbundle, path will be assetpath inside bundle
             if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
-                RetainBundleInternal(loadedBundle, 1);
+                RetainBundleInternal(loadedBundle);
                 scene.GetRootGameObjects(s_SceneRootObjectCache);
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
@@ -314,9 +313,9 @@ namespace BundleSystem
                     }
                     else
 #endif
-                    if (s_AssetBundles.TryGetValue(kv.Value.BundleName, out var loadedBundle)) ReleaseBundleInternal(loadedBundle);
+                    if (s_AssetBundles.TryGetValue(kv.Value.BundleName, out var loadedBundle)) 
                     {
-                        
+                        ReleaseBundleInternal(loadedBundle);
                     }
                 }
             }
