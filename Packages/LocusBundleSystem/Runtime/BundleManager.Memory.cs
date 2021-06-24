@@ -5,17 +5,17 @@ using UnityEngine.Networking;
 
 namespace BundleSystem
 {
-    public struct TrackHandle
+    public struct TrackHandle<T> where T : Object
     {
         public int Id { get; private set; }
         public TrackHandle(int id) => Id = id;
         public bool IsValid() => Id != 0;
         public bool IsAlive() => BundleManager.IsTrackHandleAlive(Id);
         public bool IsValidAndAlive() => IsValid() && IsAlive();
-        public static TrackHandle Invalid => new TrackHandle(0);
+        public static TrackHandle<T> Invalid => new TrackHandle<T>(0);
         public void Release()
         {
-            BundleManager.ReleaseHandleInternal(this);
+            BundleManager.ReleaseHandleInternal(Id);
             Id = 0;
         }
     }
@@ -30,7 +30,7 @@ namespace BundleSystem
         private static Dictionary<string, int> s_BundleRefCounts = new Dictionary<string, int>(10);
         private static Dictionary<string, int> s_BundleReferenceRefCounts = new Dictionary<string, int>(10);
 
-        public static void ChangeOwner(TrackHandle handle, Component newOwner)
+        public static void ChangeOwner<T>(this TrackHandle<T> handle, Component newOwner) where T : Object
         {
             if(!handle.IsValidAndAlive()) throw new System.Exception("Handle is not valid or already not tracked");
             var exitingTrackInfo = s_TrackInfoDict[handle.Id];
@@ -44,7 +44,8 @@ namespace BundleSystem
             return s_TrackInfoDict.ContainsKey(id);
         }
 
-        public static TrackHandle TrackExplicit(Object objectToTrack, TrackHandle referenceHandle, Component newOwner = null)
+        public static TrackHandle<T> TrackExplicit<TRef, T>(this TrackHandle<TRef> referenceHandle, T objectToTrack,  Component newOwner = null)
+        where TRef : Object where T : Object
         {
             if(!referenceHandle.IsValidAndAlive()) throw new System.Exception("Handle is not valid or already not tracked");
 
@@ -59,7 +60,7 @@ namespace BundleSystem
                 Owner = newOwner
             });
 
-            return new TrackHandle(newTrackId);
+            return new TrackHandle<T>(newTrackId);
         }
 
         static bool TryGetTrackIdInternal(Transform trans, out int trackId)
@@ -83,7 +84,7 @@ namespace BundleSystem
             public bool InstanceTrack;
         }
 
-        private static TrackHandle TrackObjectInternal(Component owner, Object asset, LoadedBundle loadedBundle, bool instanceTracking)
+        private static TrackHandle<T> TrackObjectInternal<T>(Component owner, T asset, LoadedBundle loadedBundle, bool instanceTracking) where T : Object
         {
             var trackId = ++s_LastTrackId;
             s_TrackInfoDict.Add(trackId, new TrackInfo(){
@@ -96,12 +97,12 @@ namespace BundleSystem
             if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
 
             RetainBundleInternal(loadedBundle);
-            return new TrackHandle(trackId);
+            return new TrackHandle<T>(trackId);
         }
 
-        private static TrackHandle[] TrackObjectsInternal<T>(Component owner, T[] assets, LoadedBundle loadedBundle) where T : Object
+        private static TrackHandle<T>[] TrackObjectsInternal<T>(Component owner, T[] assets, LoadedBundle loadedBundle) where T : Object
         {
-            var result = new TrackHandle[assets.Length];
+            var result = new TrackHandle<T>[assets.Length];
             for(int i = 0; i < assets.Length; i++)
             {
                 var obj = assets[i];
@@ -144,13 +145,13 @@ namespace BundleSystem
             s_TrackInstanceTransformDict.Add(instance.transform.GetInstanceID(), trackId);
         }
 
-        internal static void ReleaseHandleInternal(TrackHandle handle)
+        internal static void ReleaseHandleInternal(int trackId)
         {
-            if(!handle.IsValid()) return;
-            if(!s_TrackInfoDict.TryGetValue(handle.Id, out var trackInfo)) return;
+            if(trackId == 0) return;
+            if(!s_TrackInfoDict.TryGetValue(trackId, out var trackInfo)) return;
 
             //remove anyway
-            s_TrackInfoDict.Remove(handle.Id);
+            s_TrackInfoDict.Remove(trackId);
 
             if(trackInfo.InstanceTrack) s_TrackInstanceTransformDict.Remove(trackInfo.Owner.GetInstanceID());
 
@@ -198,13 +199,13 @@ namespace BundleSystem
         }
 
 #if UNITY_EDITOR
-        private static TrackHandle TrackObjectInternalEditor(Component owner, Object obj, string bundleName, bool instanceTracking)
+        private static TrackHandle<T> TrackObjectInternalEditor<T>(Component owner, T asset, string bundleName, bool instanceTracking) where T : Object
         {
             var trackId = ++s_LastTrackId;
             s_TrackInfoDict.Add(trackId, new TrackInfo(){
                 BundleName = bundleName,
                 Owner = owner,
-                Asset = obj,
+                Asset = asset,
                 InstanceTrack = instanceTracking
             });
 
@@ -212,12 +213,12 @@ namespace BundleSystem
 
             RetainBundleInternalEditor(bundleName);
 
-            return new TrackHandle(trackId);
+            return new TrackHandle<T>(trackId);
         }
 
-        private static TrackHandle[] TrackObjectsInternalEditor<T>(Component owner, T[] objs, string bundleName) where T : Object
+        private static TrackHandle<T>[] TrackObjectsInternalEditor<T>(Component owner, T[] objs, string bundleName) where T : Object
         {
-            var result = new TrackHandle[objs.Length];
+            var result = new TrackHandle<T>[objs.Length];
             for(int i = 0; i < objs.Length; i++)
             {
                 var obj = objs[i];
@@ -260,7 +261,7 @@ namespace BundleSystem
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObjectInternalEditor(owner, null, bundleName, true);
+                    TrackObjectInternalEditor(owner, (Object)null, bundleName, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }
@@ -273,7 +274,7 @@ namespace BundleSystem
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObjectInternal(owner, null, loadedBundle, true);
+                    TrackObjectInternal(owner, (Object)null, loadedBundle, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }

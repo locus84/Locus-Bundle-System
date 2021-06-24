@@ -7,12 +7,12 @@ namespace BundleSystem{
 
     public struct BundleSyncRequest<T> : System.IDisposable where T : Object
     {
-        public readonly static BundleSyncRequest<T> Empty = new BundleSyncRequest<T>(null, TrackHandle.Invalid);
+        public readonly static BundleSyncRequest<T> Empty = new BundleSyncRequest<T>(null, TrackHandle<T>.Invalid);
 
-        public readonly TrackHandle Handle;
+        public readonly TrackHandle<T> Handle;
         public readonly T Asset;
 
-        public BundleSyncRequest(T asset, TrackHandle handle)
+        public BundleSyncRequest(T asset, TrackHandle<T> handle)
         {
             Asset = asset;
             Handle = handle;
@@ -27,11 +27,11 @@ namespace BundleSystem{
 
     public struct BundleSyncRequests<T> : System.IDisposable where T : Object
     {
-        public readonly static BundleSyncRequests<T> Empty = new BundleSyncRequests<T>(new T[0], new TrackHandle[0]);
-        public readonly TrackHandle[] Handles;
+        public readonly static BundleSyncRequests<T> Empty = new BundleSyncRequests<T>(new T[0], new TrackHandle<T>[0]);
+        public readonly TrackHandle<T>[] Handles;
         public readonly T[] Assets;
 
-        public BundleSyncRequests(T[] assets, TrackHandle[] handles)
+        public BundleSyncRequests(T[] assets, TrackHandle<T>[] handles)
         {
             Assets = assets;
             Handles = handles;
@@ -52,8 +52,8 @@ namespace BundleSystem{
     /// </summary>
     public class BundleAsyncRequest<T> : CustomYieldInstruction, IAwaiter<BundleAsyncRequest<T>>, System.IDisposable where T : Object
     {
-        public readonly static BundleAsyncRequest<T> Empty = new BundleAsyncRequest<T>((T)null, TrackHandle.Invalid);
-        public readonly TrackHandle Handle;
+        public readonly static BundleAsyncRequest<T> Empty = new BundleAsyncRequest<T>((T)null, TrackHandle<T>.Invalid);
+        public readonly TrackHandle<T> Handle;
         AssetBundleRequest m_Request;
         T m_LoadedAsset;
 
@@ -61,7 +61,7 @@ namespace BundleSystem{
         /// actual assetbundle request warpper
         /// </summary>
         /// <param name="request"></param>
-        public BundleAsyncRequest(AssetBundleRequest request, TrackHandle handle)
+        public BundleAsyncRequest(AssetBundleRequest request, TrackHandle<T> handle)
         {
             m_Request = request;
             Handle = handle;
@@ -71,7 +71,7 @@ namespace BundleSystem{
         /// create already ended bundle request for editor use
         /// </summary>
         /// <param name="loadedAsset"></param>
-        public BundleAsyncRequest(T loadedAsset, TrackHandle handle)
+        public BundleAsyncRequest(T loadedAsset, TrackHandle<T> handle)
         {
             m_LoadedAsset = loadedAsset;
             Handle = handle;

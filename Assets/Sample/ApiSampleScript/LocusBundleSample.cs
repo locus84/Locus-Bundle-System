@@ -113,9 +113,7 @@ public class LocusBundleSample : MonoBehaviour
             {
                 yield return loadReq;
                 memberTexture = loadReq.Asset;
-                BundleManager.TrackExplicit(loadReq.Asset, loadReq.Handle);
             }
-
             //here the texture will not be unloaded until gameobject destruction.
             //so you don't have to care about it's release
 

@@ -111,13 +111,13 @@ namespace BundleSystem
                 if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return BundleAsyncRequest<T>.Empty; //asset not exist
                 var request = foundBundle.Bundle.LoadAssetAsync<T>(assetName);
                 //need to keep bundle while loading, so we retain before load, release after load
-                var handle = TrackObjectInternal(owner, null, foundBundle, false);
+                var handle = TrackObjectInternal(owner, (T)null, foundBundle, false);
                 request.completed += op => AsyncAssetLoaded(request, handle);
                 return new BundleAsyncRequest<T>(request, handle);
             }
         }
 
-        private static void AsyncAssetLoaded(AssetBundleRequest request, TrackHandle handle)
+        private static void AsyncAssetLoaded<T>(AssetBundleRequest request, TrackHandle<T> handle) where T : Object
         {
             if(request.asset == null) 
             {
@@ -205,56 +205,46 @@ namespace BundleSystem
             }
         }
         
-        public static GameObject Instantiate(TrackHandle handle)
+        public static GameObject Instantiate(TrackHandle<GameObject> handle)
         {
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var info)) throw new System.Exception("Handle is notValid");
-            if(!(info.Asset is GameObject original)) throw new System.Exception("Handle is not pointing GameObject");
-
-            var instance = GameObject.Instantiate(original);
+            var instance = GameObject.Instantiate(info.Asset as GameObject);
             
             TrackInstanceInternal(info, instance);
             return instance;
         }
 
-        public static GameObject Instantiate(TrackHandle handle, Transform parent)
+        public static GameObject Instantiate(TrackHandle<GameObject> handle, Transform parent)
         {
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var info)) throw new System.Exception("Handle is notValid");
-            if(!(info.Asset is GameObject original)) throw new System.Exception("Handle is not pointing GameObject");
-
-            var instance = GameObject.Instantiate(original, parent);
+            var instance = GameObject.Instantiate(info.Asset as GameObject, parent);
             
             TrackInstanceInternal(info, instance);
             return instance;
         }
 
-        public static GameObject Instantiate(TrackHandle handle, Transform parent, bool instantiateInWorldSpace)
+        public static GameObject Instantiate(TrackHandle<GameObject> handle, Transform parent, bool instantiateInWorldSpace)
         {
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var info)) throw new System.Exception("Handle is notValid");
-            if(!(info.Asset is GameObject original)) throw new System.Exception("Handle is not pointing GameObject");
-
-            var instance = GameObject.Instantiate(original, parent, instantiateInWorldSpace);
+            var instance = GameObject.Instantiate(info.Asset as GameObject, parent, instantiateInWorldSpace);
             
             TrackInstanceInternal(info, instance);
             return instance;
         }
 
-        public static GameObject Instantiate(TrackHandle handle, Vector3 position, Quaternion rotation)
+        public static GameObject Instantiate(TrackHandle<GameObject> handle, Vector3 position, Quaternion rotation)
         {
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var info)) throw new System.Exception("Handle is notValid");
-            if(!(info.Asset is GameObject original)) throw new System.Exception("Handle is not pointing GameObject");
-
-            var instance = GameObject.Instantiate(original, position, rotation);
+            var instance = GameObject.Instantiate(info.Asset as GameObject, position, rotation);
             
             TrackInstanceInternal(info, instance);
             return instance;
         }
 
-        public static GameObject Instantiate(TrackHandle handle, Vector3 position, Quaternion rotation, Transform parent)
+        public static GameObject Instantiate(TrackHandle<GameObject> handle, Vector3 position, Quaternion rotation, Transform parent)
         {
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var info)) throw new System.Exception("Handle is notValid");
-            if(!(info.Asset is GameObject original)) throw new System.Exception("Handle is not pointing GameObject");
-
-            var instance = GameObject.Instantiate(original, position, rotation, parent);
+            var instance = GameObject.Instantiate(info.Asset as GameObject, position, rotation, parent);
             
             TrackInstanceInternal(info, instance);
             return instance;
