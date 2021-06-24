@@ -63,6 +63,15 @@ namespace BundleSystem
             return new TrackHandle<T>(newTrackId);
         }
 
+        public static TrackHandle<GameObject> GetInstanceTrackHandle(this GameObject gameObject) 
+        {
+            if(!TryGetTrackIdInternal(gameObject.transform, out var trackId))
+            {
+                return TrackHandle<GameObject>.Invalid;
+            }
+            return new TrackHandle<GameObject>(trackId);
+        }
+
         static bool TryGetTrackIdInternal(Transform trans, out int trackId)
         {
             do
