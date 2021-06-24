@@ -4,12 +4,56 @@ using System.Threading;
 using UnityEngine;
 
 namespace BundleSystem{
+
+    public struct BundleSyncRequest<T> : System.IDisposable where T : Object
+    {
+        public readonly static BundleSyncRequest<T> Empty = new BundleSyncRequest<T>(null, TrackHandle.Invalid);
+
+        public readonly TrackHandle Handle;
+        public readonly T Asset;
+
+        public BundleSyncRequest(T asset, TrackHandle handle)
+        {
+            Asset = asset;
+            Handle = handle;
+        }
+
+
+        public void Dispose()
+        {
+            Handle.Release();
+        }
+    }
+
+    public struct BundleSyncRequests<T> : System.IDisposable where T : Object
+    {
+        public readonly static BundleSyncRequests<T> Empty = new BundleSyncRequests<T>(new T[0], new TrackHandle[0]);
+        public readonly TrackHandle[] Handles;
+        public readonly T[] Assets;
+
+        public BundleSyncRequests(T[] assets, TrackHandle[] handles)
+        {
+            Assets = assets;
+            Handles = handles;
+        }
+
+        public void Dispose()
+        {
+            for(int i = 0; i < Handles.Length; i++)
+            {
+                Handles[i].Release();
+            }
+        }
+    }
+
     /// <summary>
     /// this class is for simulating assetbundle request in editor.
     /// using this class we can provide unified structure.
     /// </summary>
-    public class BundleRequest<T> : CustomYieldInstruction, IAwaiter<BundleRequest<T>>, System.IDisposable where T : Object
+    public class BundleAsyncRequest<T> : CustomYieldInstruction, IAwaiter<BundleAsyncRequest<T>>, System.IDisposable where T : Object
     {
+        public readonly static BundleAsyncRequest<T> Empty = new BundleAsyncRequest<T>((T)null, TrackHandle.Invalid);
+        public readonly TrackHandle Handle;
         AssetBundleRequest m_Request;
         T m_LoadedAsset;
 
@@ -17,18 +61,20 @@ namespace BundleSystem{
         /// actual assetbundle request warpper
         /// </summary>
         /// <param name="request"></param>
-        public BundleRequest(AssetBundleRequest request)
+        public BundleAsyncRequest(AssetBundleRequest request, TrackHandle handle)
         {
             m_Request = request;
+            Handle = handle;
         }
 
         /// <summary>
         /// create already ended bundle request for editor use
         /// </summary>
         /// <param name="loadedAsset"></param>
-        public BundleRequest(T loadedAsset)
+        public BundleAsyncRequest(T loadedAsset, TrackHandle handle)
         {
             m_LoadedAsset = loadedAsset;
+            Handle = handle;
         }
 
         //provide similar apis
@@ -37,26 +83,10 @@ namespace BundleSystem{
         public float Progress => m_Request == null ? 1f : m_Request.progress;
         public bool IsCompleted => m_Request == null ? true : m_Request.isDone;
 
-        public void Dispose()
-        {
-            if(m_Request != null)
-            {
-                if(m_Request.isDone)
-                {
-                    if (m_Request.asset != null) BundleManager.ReleaseObject(m_Request.asset);
-                }
-                else
-                {
-                    m_Request.completed += op =>
-                    {
-                        if(m_Request.asset != null) BundleManager.ReleaseObject(m_Request.asset);
-                    };
-                }
-            }
-        }
+        public void Dispose() => Handle.Release();
 
-        BundleRequest<T> IAwaiter<BundleRequest<T>>.GetResult() => this;
-        public IAwaiter<BundleRequest<T>> GetAwaiter() => this;
+        BundleAsyncRequest<T> IAwaiter<BundleAsyncRequest<T>>.GetResult() => this;
+        public IAwaiter<BundleAsyncRequest<T>> GetAwaiter() => this;
 
         public void UnsafeOnCompleted(System.Action continuation)
         {
@@ -76,7 +106,7 @@ namespace BundleSystem{
 
     }
 
-    public class BundleSceneRequest : CustomYieldInstruction, IAwaiter<BundleSceneRequest>
+    public class BundleAsyncSceneRequest : CustomYieldInstruction, IAwaiter<BundleAsyncSceneRequest>
     {
         AsyncOperation m_AsyncOperation;
 
@@ -84,18 +114,18 @@ namespace BundleSystem{
         /// actual assetbundle request warpper
         /// </summary>
         /// <param name="request"></param>
-        public BundleSceneRequest(AsyncOperation operation)
+        public BundleAsyncSceneRequest(AsyncOperation operation)
         {
             m_AsyncOperation = operation;
         }
 
-        bool IAwaiter<BundleSceneRequest>.IsCompleted => m_AsyncOperation.isDone;
+        bool IAwaiter<BundleAsyncSceneRequest>.IsCompleted => m_AsyncOperation.isDone;
 
         public override bool keepWaiting => !m_AsyncOperation.isDone;
         public float Progress => m_AsyncOperation.progress;
 
-        BundleSceneRequest IAwaiter<BundleSceneRequest>.GetResult() => this;
-        public IAwaiter<BundleSceneRequest> GetAwaiter() => this;
+        BundleAsyncSceneRequest IAwaiter<BundleAsyncSceneRequest>.GetResult() => this;
+        public IAwaiter<BundleAsyncSceneRequest> GetAwaiter() => this;
 
         public void OnCompleted(System.Action continuation)
         {
@@ -191,7 +221,6 @@ namespace BundleSystem{
             else m_OnComplete += continuation;
         }
     }
-
 
     public enum BundleErrorCode
     {

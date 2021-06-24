@@ -7,21 +7,28 @@ namespace BundleSystem
 {
     public struct TrackHandle
     {
-        public readonly int Id;
+        public int Id { get; private set; }
         public TrackHandle(int id) => Id = id;
         public bool IsValid() => Id != 0;
         public bool IsAlive() => BundleManager.IsTrackHandleAlive(Id);
         public bool IsValidAndAlive() => IsValid() && IsAlive();
+        public static TrackHandle Invalid => new TrackHandle(0);
+        public void Release()
+        {
+            BundleManager.ReleaseHandleInternal(this);
+            Id = 0;
+        }
     }
 
     public static partial class BundleManager
     {
         static int s_LastTrackId = 0;
         static IndexedDictionary<int, TrackInfo> s_TrackInfoDict = new IndexedDictionary<int, TrackInfo>(10);
-        static Dictionary<int, int> s_TrackInstanceTransformDict = new Dictionary<int, int>();
+        static Dictionary<int, int> s_TrackInstanceTransformDict = new Dictionary<int, int>(10);
 
         //bundle ref count
         private static Dictionary<string, int> s_BundleRefCounts = new Dictionary<string, int>(10);
+        private static Dictionary<string, int> s_BundleReferenceRefCounts = new Dictionary<string, int>(10);
 
         public static void ChangeOwner(TrackHandle handle, Component newOwner)
         {
@@ -48,7 +55,7 @@ namespace BundleSystem
             s_TrackInfoDict.Add(newTrackId, new TrackInfo()
             {
                 BundleName = exitingTrackInfo.BundleName,
-                Tracked = objectToTrack,
+                Asset = objectToTrack,
                 Owner = newOwner
             });
 
@@ -71,18 +78,18 @@ namespace BundleSystem
         public struct TrackInfo
         {
             public Component Owner;
-            public Object Tracked;
+            public Object Asset;
             public string BundleName;
             public bool InstanceTrack;
         }
 
-        private static TrackHandle TrackObjectInternal(Component owner, Object obj, LoadedBundle loadedBundle, bool instanceTracking)
+        private static TrackHandle TrackObjectInternal(Component owner, Object asset, LoadedBundle loadedBundle, bool instanceTracking)
         {
             var trackId = ++s_LastTrackId;
             s_TrackInfoDict.Add(trackId, new TrackInfo(){
                 BundleName = loadedBundle.Name,
                 Owner = owner,
-                Tracked = obj,
+                Asset = asset,
                 InstanceTrack = instanceTracking
             });
 
@@ -92,28 +99,53 @@ namespace BundleSystem
             return new TrackHandle(trackId);
         }
 
-        private static TrackHandle[] TrackObjectsInternal<T>(Component owner, T[] objs, LoadedBundle loadedBundle) where T : Object
+        private static TrackHandle[] TrackObjectsInternal<T>(Component owner, T[] assets, LoadedBundle loadedBundle) where T : Object
         {
-            var result = new TrackHandle[objs.Length];
-            for(int i = 0; i < objs.Length; i++)
+            var result = new TrackHandle[assets.Length];
+            for(int i = 0; i < assets.Length; i++)
             {
-                var obj = objs[i];
+                var obj = assets[i];
                 var trackId = ++s_LastTrackId;
                 s_TrackInfoDict.Add(trackId, new TrackInfo()
                 {
                     BundleName = loadedBundle.Name,
                     Owner = owner,
-                    Tracked = objs[i],
+                    Asset = assets[i],
                     InstanceTrack = false
                 });
             }
 
-            if(objs.Length > 0) RetainBundleInternal(loadedBundle, objs.Length); //do once
+            if(assets.Length > 0) RetainBundleInternal(loadedBundle, assets.Length); //do once
 
             return result;
         }
 
-        private static void UntrackObjectInternal(TrackHandle handle)
+        private static void TrackInstanceInternal(TrackInfo info, GameObject instance)
+        {
+            var trackId = ++s_LastTrackId;
+            info.Owner = instance.transform;
+            info.InstanceTrack = true;
+            s_TrackInfoDict.Add(trackId, info);
+
+            //retain
+#if UNITY_EDITOR
+            if(UseAssetDatabaseMap)
+            {
+                RetainBundleInternalEditor(info.BundleName);
+            }
+            else
+#endif
+            //find related bundle
+            if(s_AssetBundles.TryGetValue(info.BundleName, out var loadedBundle))
+            {
+                 
+                RetainBundleInternal(loadedBundle);
+            }
+
+            s_TrackInstanceTransformDict.Add(instance.transform.GetInstanceID(), trackId);
+        }
+
+        internal static void ReleaseHandleInternal(TrackHandle handle)
         {
             if(!handle.IsValid()) return;
             if(!s_TrackInfoDict.TryGetValue(handle.Id, out var trackInfo)) return;
@@ -122,16 +154,118 @@ namespace BundleSystem
             s_TrackInfoDict.Remove(handle.Id);
 
             if(trackInfo.InstanceTrack) s_TrackInstanceTransformDict.Remove(trackInfo.Owner.GetInstanceID());
-            //find related bundle
-            if(!s_AssetBundles.TryGetValue(trackInfo.BundleName, out var loadedBundle)) return;
 
             //release
-            ReleaseBundleInternal(loadedBundle, 1);
+#if UNITY_EDITOR
+            if(UseAssetDatabaseMap)
+            {
+                ReleaseBundleInternalEditor(trackInfo.BundleName);
+            }
+            else
+#endif
+            //find related bundle
+            if(!s_AssetBundles.TryGetValue(trackInfo.BundleName, out var loadedBundle))
+            {
+                ReleaseBundleInternal(loadedBundle);
+            }
         }
+
+
+        private static void RetainBundleInternal(LoadedBundle bundle, int count = 1)
+        {
+            for (int i = 0; i < bundle.Dependencies.Count; i++)
+            {
+                var refBundleName = bundle.Dependencies[i];
+                if (!s_BundleRefCounts.ContainsKey(refBundleName)) s_BundleRefCounts[refBundleName] = count;
+                else s_BundleRefCounts[refBundleName] += count;
+            }
+        }
+
+        private static void ReleaseBundleInternal(LoadedBundle bundle, int count = 1)
+        {
+            for (int i = 0; i < bundle.Dependencies.Count; i++)
+            {
+                var refBundleName = bundle.Dependencies[i];
+                if (s_BundleRefCounts.ContainsKey(refBundleName))
+                {
+                    s_BundleRefCounts[refBundleName] -= count;
+                    if (s_BundleRefCounts[refBundleName] <= 0) 
+                    {
+                        s_BundleRefCounts.Remove(refBundleName);
+                        ReloadBundle(refBundleName);
+                    }
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        private static TrackHandle TrackObjectInternalEditor(Component owner, Object obj, string bundleName, bool instanceTracking)
+        {
+            var trackId = ++s_LastTrackId;
+            s_TrackInfoDict.Add(trackId, new TrackInfo(){
+                BundleName = bundleName,
+                Owner = owner,
+                Asset = obj,
+                InstanceTrack = instanceTracking
+            });
+
+            if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
+
+            ReleaseBundleInternalEditor(bundleName);
+
+            return new TrackHandle(trackId);
+        }
+
+        private static TrackHandle[] TrackObjectsInternalEditor<T>(Component owner, T[] objs, string bundleName) where T : Object
+        {
+            var result = new TrackHandle[objs.Length];
+            for(int i = 0; i < objs.Length; i++)
+            {
+                var obj = objs[i];
+                var trackId = ++s_LastTrackId;
+                s_TrackInfoDict.Add(trackId, new TrackInfo()
+                {
+                    BundleName = bundleName,
+                    Owner = owner,
+                    Asset = objs[i],
+                    InstanceTrack = false
+                });
+            }
+
+            if(objs.Length > 0) ReleaseBundleInternalEditor(bundleName, objs.Length);
+            return result;
+        }
+
+        private static void RetainBundleInternalEditor(string bundleName, int count = 1)
+        {
+            if (!s_BundleRefCounts.ContainsKey(bundleName)) s_BundleRefCounts[bundleName] = count;
+            else s_BundleRefCounts[bundleName] += count;
+        }
+
+        private static void ReleaseBundleInternalEditor(string bundleName, int count = 1)
+        {
+            var nextCount = s_BundleRefCounts[bundleName] - count;
+            if(nextCount == 0) s_BundleRefCounts.Remove(bundleName);
+            else s_BundleRefCounts[bundleName] = nextCount;
+        }
+#endif
 
         static List<GameObject> s_SceneRootObjectCache = new List<GameObject>();
         private static void TrackOnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
+#if UNITY_EDITOR
+            if (UseAssetDatabaseMap && s_EditorDatabaseMap.TryGetBundleNameFromSceneAssetPath(scene.path, out var bundleName))
+            {
+                RetainBundleInternalEditor(bundleName);
+                scene.GetRootGameObjects(s_SceneRootObjectCache);
+                for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
+                {
+                    var owner = s_SceneRootObjectCache[i].transform;
+                    TrackObjectInternalEditor(owner, null, bundleName, true);
+                }
+                s_SceneRootObjectCache.Clear();
+            }
+#endif
             //if scene is from assetbundle, path will be assetpath inside bundle
             if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
@@ -148,52 +282,41 @@ namespace BundleSystem
 
         private static void TrackOnSceneUnLoaded(UnityEngine.SceneManagement.Scene scene)
         {
+#if UNITY_EDITOR
+            if (UseAssetDatabaseMap && s_EditorDatabaseMap.TryGetBundleNameFromSceneAssetPath(scene.path, out var bundleName))
+            {
+                ReleaseBundleInternalEditor(bundleName);
+            }
+#endif
             //if scene is from assetbundle, path will be assetpath inside bundle
             if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
-                ReleaseBundleInternal(loadedBundle, 1);
+                ReleaseBundleInternal(loadedBundle);
             }
         }
 
-        private static void RetainBundleInternal(LoadedBundle bundle, int count)
-        {
-            for (int i = 0; i < bundle.Dependencies.Count; i++)
-            {
-                var refBundleName = bundle.Dependencies[i];
-                if (!s_BundleRefCounts.ContainsKey(refBundleName)) s_BundleRefCounts[refBundleName] = count;
-                else s_BundleRefCounts[refBundleName] += count;
-            }
-        }
-
-        private static void ReleaseBundleInternal(LoadedBundle bundle, int count)
-        {
-            for (int i = 0; i < bundle.Dependencies.Count; i++)
-            {
-                var refBundleName = bundle.Dependencies[i];
-                if (s_BundleRefCounts.ContainsKey(refBundleName))
-                {
-                    s_BundleRefCounts[refBundleName] = count;
-                    if (s_BundleRefCounts[refBundleName] <= 0) 
-                    {
-                        s_BundleRefCounts.Remove(refBundleName);
-                        ReloadBundle(refBundleName);
-                    }
-                }
-            }
-        }
-
-        //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
         private static void Update()
         {
-            //first, owner
+            //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
+            int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackInfoDict.Count);
+
+            for(int i = 0; i < trackCount; i++)
             {
-                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackInfoDict.Count);
-                for(int i = 0; i < trackCount; i++)
+                if (s_TrackInfoDict.TryGetNext(out var kv) && kv.Value.Owner == null)
                 {
-                    if (s_TrackInfoDict.TryGetNext(out var kv) && kv.Value.Owner == null)
+                    s_TrackInfoDict.Remove(kv.Key);
+
+                    //release bundle
+#if UNITY_EDITOR
+                    if(UseAssetDatabaseMap)
                     {
-                        s_TrackInfoDict.Remove(kv.Key);
-                        //release bundle
+                        ReleaseBundleInternalEditor(kv.Value.BundleName);
+                    }
+                    else
+#endif
+                    if (s_AssetBundles.TryGetValue(kv.Value.BundleName, out var loadedBundle)) ReleaseBundleInternal(loadedBundle);
+                    {
+                        
                     }
                 }
             }
@@ -223,11 +346,11 @@ namespace BundleSystem
             }
             else
             {
-                s_Helper.StartCoroutine(ReloadBundle(bundleName, loadedBundle));
+                s_Helper.StartCoroutine(CoReloadBundle(bundleName, loadedBundle));
             }
         }
 
-        static IEnumerator ReloadBundle(string bundleName, LoadedBundle loadedBundle)
+        static IEnumerator CoReloadBundle(string bundleName, LoadedBundle loadedBundle)
         {
             if (LogMessages) Debug.Log($"Start Reloading Bundle {bundleName}");
             var bundleReq = loadedBundle.IsLocalBundle? UnityWebRequestAssetBundle.GetAssetBundle(loadedBundle.LoadPath) : 

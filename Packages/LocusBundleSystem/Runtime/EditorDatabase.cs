@@ -13,6 +13,7 @@ namespace BundleSystem
         public string OutputPath;
 
         private Dictionary<string, Dictionary<string, List<string>>> m_Map = new Dictionary<string, Dictionary<string, List<string>>>();
+        private Dictionary<string, string> m_ScenePathToBundleName = new Dictionary<string, string>();
         static List<string> s_EmptyStringList = new List<string>();
         
         public void Append(string bundleName, string[] assetNames, string[] addressableNames)
@@ -20,12 +21,20 @@ namespace BundleSystem
             var assetDict = new Dictionary<string, List<string>>();
             for(int i = 0; i < assetNames.Length; i++)
             {
-                if(assetDict.TryGetValue(addressableNames[i], out var list))
+                var loadName = addressableNames[i];
+                var assetPath = assetNames[i];
+
+                if(!assetDict.TryGetValue(loadName, out var list))
                 {
-                    list.Add(assetNames[i]);
-                    continue;
+                    list = new List<string>();
+                    assetDict.Add(loadName, list);
                 }
-                assetDict.Add(addressableNames[i], new List<string>() { assetNames[i] });
+                list.Add(assetPath);
+                
+                if(assetPath.EndsWith(".unity"))
+                {
+                    m_ScenePathToBundleName.Add(assetPath, bundleName);
+                }
             }
             m_Map.Add(bundleName, assetDict);
         }
@@ -49,6 +58,7 @@ namespace BundleSystem
             return assets.Count > 0;
         }
 
+
         public string GetAssetPath<T>(string bundleName, string assetName) where T : UnityEngine.Object
         {
             var assets = GetAssetPaths(bundleName, assetName);
@@ -68,6 +78,11 @@ namespace BundleSystem
             }
 
             return assets[foundIndex];
+        }
+
+        public bool TryGetBundleNameFromSceneAssetPath(string sceneAssetPath, out string bundleName)
+        {
+            return m_ScenePathToBundleName.TryGetValue(sceneAssetPath, out bundleName);
         }
 
         public string GetScenePath(string bundleName, string sceneName)

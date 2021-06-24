@@ -33,11 +33,11 @@ public class SampleTitleScene : MonoBehaviour
     // Start is called before the first frame update
     public void OnSpawnButton()
     {
-        var loadedAsset = BundleManager.Load<GameObject>("Remote", "Cube");
-        if(loadedAsset != null)
+        var loadedAsset = this.Load<GameObject>("Remote", "Cube");
+        if(loadedAsset.Handle.IsValid())
         {
-            m_Instances.Add(BundleManager.Instantiate(loadedAsset));
-            BundleManager.ReleaseObject(loadedAsset);
+            m_Instances.Add(BundleManager.Instantiate(loadedAsset.Handle));
+            loadedAsset.Handle.Release();
         }
     }
 

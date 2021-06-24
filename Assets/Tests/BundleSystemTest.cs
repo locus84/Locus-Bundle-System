@@ -11,6 +11,7 @@ namespace Tests
     public class BundleSystemTest
     {
         AssetBundleBuildSetting m_PrevActiveSettingCache = null;
+        Component m_Owner;
 
         [UnitySetUp]
         public IEnumerator InitializeTestSetup()
@@ -39,6 +40,8 @@ namespace Tests
 
             yield return manifestReq;
             yield return BundleManager.DownloadAssetBundles(manifestReq.Result);
+
+            m_Owner = new GameObject("Owner").transform;
         }
 
         [TearDown]
@@ -54,11 +57,8 @@ namespace Tests
         [Test]
         public void SyncApiTest()
         {
-            {
-                var tex = BundleManager.Load<Texture>("Local", "TestTexture_Local");
-                Assert.NotNull(tex);
-                BundleManager.ReleaseObject(tex);
-            }
+            var texReq = m_Owner.Load<Texture>("Local", "TestTexture_Local");
+            Assert.NotNull(texReq.Asset);
         }
 
         [UnityTest]
@@ -78,7 +78,7 @@ namespace Tests
         private async Task TaskAsyncApiTestFunction()
         {
             await Task.Delay(1000);
-            Assert.NotNull(await BundleManager.LoadAsync<Texture>("Local", "TestTexture_Local"));
+            Assert.NotNull(await m_Owner.LoadAsync<Texture>("Local", "TestTexture_Local"));
         }
     }
 }

@@ -52,14 +52,14 @@ public class LocusBundleSample : MonoBehaviour
     {
         //Sync loading
         {
-            var loaded = BundleManager.Load<Texture2D>("Texture", "TextureName");
+            var loaded = this.Load<Texture2D>("Texture", "TextureName");
             //do something
-            BundleManager.ReleaseObject(loaded);
+            loaded.Handle.Release();
         }
 
         //Async loading
         {
-            var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TextureName");
+            var loadReq = this.LoadAsync<Texture2D>("Texture", "TextureName");
             yield return loadReq;
             //do something
             loadReq.Dispose();
@@ -68,7 +68,7 @@ public class LocusBundleSample : MonoBehaviour
         //Asnyc loading with 
         {
             //use using clause for easier release
-            using (var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TextureName"))
+            using (var loadReq = this.LoadAsync<Texture2D>("Texture", "TextureName"))
             {
                 yield return loadReq;
                 //do something
@@ -77,18 +77,18 @@ public class LocusBundleSample : MonoBehaviour
 
         //Instantiate Sync
         {
-            var loaded = BundleManager.Load<GameObject>("Prefab", "PrefabName");
+            var loaded = this.Load<GameObject>("Prefab", "PrefabName");
             //do something
-            var instance = BundleManager.Instantiate(loaded);
-            BundleManager.ReleaseObject(loaded);
+            var instance = BundleManager.Instantiate(loaded.Handle);
+            loaded.Handle.Release();
         }
 
         //Instantiate Async with using clause(which is recommended, or just dispose request)
         {
-            using (var loadReq = BundleManager.LoadAsync<GameObject>("Prefab", "PrefabName"))
+            using (var loadReq = this.LoadAsync<GameObject>("Prefab", "PrefabName"))
             {
                 yield return loadReq;
-                var instance = BundleManager.Instantiate(loadReq.Asset);
+                var instance = BundleManager.Instantiate(loadReq.Handle);
             }
         }
 
@@ -109,25 +109,25 @@ public class LocusBundleSample : MonoBehaviour
             //use using clause for easier release
             Texture2D memberTexture;
 
-            using (var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TextureName"))
+            using (var loadReq = this.LoadAsync<Texture2D>("Texture", "TextureName"))
             {
                 yield return loadReq;
                 memberTexture = loadReq.Asset;
-                BundleManager.TrackObjectWithOwner(gameObject, memberTexture);
+                BundleManager.TrackExplicit(loadReq.Asset, loadReq.Handle);
             }
 
             //here the texture will not be unloaded until gameobject destruction.
             //so you don't have to care about it's release
 
             //if we need to swap the texture
-            using (var loadReq = BundleManager.LoadAsync<Texture2D>("Texture", "TextureName2"))
+            using (var loadReq = this.LoadAsync<Texture2D>("Texture", "TextureName2"))
             {
                 yield return loadReq;
                 //cancel owner and untrack
-                BundleManager.UntrackObjectWithOwner(gameObject, memberTexture);
-                memberTexture = loadReq.Asset;
-                //re-track with owner with new asset
-                BundleManager.TrackObjectWithOwner(gameObject, memberTexture);
+                // BundleManager.UntrackObjectWithOwner(gameObject, memberTexture);
+                // memberTexture = loadReq.Asset;
+                // //re-track with owner with new asset
+                // BundleManager.TrackObjectWithOwner(gameObject, memberTexture);
             }
         }
     }

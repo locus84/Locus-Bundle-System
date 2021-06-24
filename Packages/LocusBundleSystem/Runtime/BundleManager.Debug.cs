@@ -22,22 +22,7 @@ namespace BundleSystem
                     if (kv.Value == 0) continue;
                     GUILayout.Label($"Name : {kv.Key} - {kv.Value}");
                 }
-
-                if (Application.isEditor)
-                {
-                    GUILayout.Label("-----------------");
-                    GUILayout.Label("Bundle UseCounts");
-                    GUILayout.Label("-----------------");
-                    foreach (var kv in s_BundleDirectUseCount)
-                    {
-                        if (kv.Value == 0) continue;
-                        GUILayout.Label($"Name : {kv.Key} - {kv.Value}");
-                    }
-                }
-
                 GUILayout.Label("-----------------");
-                GUILayout.Label($"Tracking Object Count {s_TrackingObjects.Count}");
-                GUILayout.Label($"Tracking Owner Count {s_TrackingOwners.Count}");
             }
         }
     }
