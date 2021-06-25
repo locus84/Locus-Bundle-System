@@ -69,11 +69,14 @@ namespace Tests
         [UnityTest]
         public IEnumerator AsyncApiTest()
         {
+            m_Image = m_Owner.gameObject.AddComponent<UnityEngine.UI.Image>();
             var spriteReq = m_Image.LoadAsync<Sprite>("Object", "TestSprite");
             //disabled
             yield return spriteReq;
-            m_Image.sprite = spriteReq.Asset;
+            m_Image.sprite = spriteReq.SuppressAutoRelease().Asset;
             spriteReq.Handle.Override(ref m_SpriteHandle);
+
+            yield return new WaitForSeconds(10);
         }
 
         [UnityTest]

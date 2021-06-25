@@ -110,6 +110,14 @@ namespace BundleSystem
                 m_KeyDictionary = new Dictionary<TKey, int>(capacity);
             }
 
+            public void FillNormalDictionary(Dictionary<TKey, TValue> targetDict)
+            {
+                for(int i = 0; i < m_InnerList.Count; i++)
+                {
+                    targetDict.Add(m_InnerList[i].Key, m_InnerList[i].Value);
+                }
+            }
+
             public bool TryGetValue(TKey key, out TValue value)
             {
                 if (!m_KeyDictionary.TryGetValue(key, out var index))

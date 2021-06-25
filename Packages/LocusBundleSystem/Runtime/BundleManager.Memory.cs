@@ -23,6 +23,7 @@ namespace BundleSystem
     public static partial class BundleManager
     {
         static int s_LastTrackId = 0;
+        static Object s_SceneObjectDummy = new Object();
         static IndexedDictionary<int, TrackInfo> s_TrackInfoDict = new IndexedDictionary<int, TrackInfo>(10);
         static IndexedDictionary<int, float> s_LoadingAssetsDict = new IndexedDictionary<int, float>(10);
         static Dictionary<int, int> s_TrackInstanceTransformDict = new Dictionary<int, int>(10);
@@ -30,6 +31,13 @@ namespace BundleSystem
         //bundle ref count
         private static Dictionary<string, int> s_BundleRefCounts = new Dictionary<string, int>(10);
         private static Dictionary<string, int> s_BundleReferenceRefCounts = new Dictionary<string, int>(10);
+        
+        public static void GetTrackingSnapshot(Dictionary<int, TrackInfo> targetDict)
+        {
+            targetDict.Clear();
+            if(!Application.isPlaying) return;
+            s_TrackInfoDict.FillNormalDictionary(targetDict);
+        } 
 
         public static void ChangeOwner<T>(this TrackHandle<T> handle, Component newOwner) where T : Object
         {
@@ -275,7 +283,7 @@ namespace BundleSystem
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObjectEditor(owner, (Object)null, bundleName, true);
+                    TrackObjectEditor(owner, s_SceneObjectDummy, bundleName, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }
@@ -288,7 +296,7 @@ namespace BundleSystem
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObject(owner, (Object)null, loadedBundle, true);
+                    TrackObject(owner, s_SceneObjectDummy, loadedBundle, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }

@@ -81,14 +81,9 @@ namespace BundleSystem{
         //provide similar apis
         public override bool keepWaiting => m_Request == null ? false : !m_Request.isDone;
         public float Progress => m_Request == null ? 1f : m_Request.progress;
+        public T Asset => m_Request == null ? m_LoadedAsset : m_Request.asset as T;
         public bool IsCompleted => m_Request == null ? true : m_Request.isDone;
         public void Dispose() => Handle.Release();
-        public T Asset { get {
-            if(!IsCompleted) return default;
-            SuppressAutoRelease();
-            return m_Request == null ? m_LoadedAsset : m_Request.asset as T;
-        }}
-
 
         BundleAsyncRequest<T> IAwaiter<BundleAsyncRequest<T>>.GetResult() => this;
         public IAwaiter<BundleAsyncRequest<T>> GetAwaiter() => this;
