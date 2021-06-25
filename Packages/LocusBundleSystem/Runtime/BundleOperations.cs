@@ -56,6 +56,7 @@ namespace BundleSystem{
         public readonly TrackHandle<T> Handle;
         AssetBundleRequest m_Request;
         T m_LoadedAsset;
+        bool m_AutoRelease = true;
 
         /// <summary>
         /// actual assetbundle request warpper
@@ -79,11 +80,15 @@ namespace BundleSystem{
 
         //provide similar apis
         public override bool keepWaiting => m_Request == null ? false : !m_Request.isDone;
-        public T Asset => m_Request == null ? m_LoadedAsset : m_Request.asset as T;
         public float Progress => m_Request == null ? 1f : m_Request.progress;
         public bool IsCompleted => m_Request == null ? true : m_Request.isDone;
-
         public void Dispose() => Handle.Release();
+        public T Asset { get {
+            if(!IsCompleted) return default;
+            SuppressAutoRelease();
+            return m_Request == null ? m_LoadedAsset : m_Request.asset as T;
+        }}
+
 
         BundleAsyncRequest<T> IAwaiter<BundleAsyncRequest<T>>.GetResult() => this;
         public IAwaiter<BundleAsyncRequest<T>> GetAwaiter() => this;
@@ -91,6 +96,23 @@ namespace BundleSystem{
         public void UnsafeOnCompleted(System.Action continuation)
         {
             OnCompleted(continuation);
+        }
+
+        public BundleAsyncRequest<T> SuppressAutoRelease()
+        {
+            //we already suppressed
+            if(!m_AutoRelease) return this;
+
+            //set value false, if already tracking, try untrack
+            m_AutoRelease = false;
+            if(IsCompleted) BundleManager.UntrackAutoReleaseInternal(Handle.Id);
+
+            return this;
+        }
+
+        internal void OnTrackAutoRelease()
+        { 
+            if(m_AutoRelease) BundleManager.TrackAutoReleaseInternal(Handle.Id);
         }
 
         public void OnCompleted(System.Action continuation)
@@ -103,7 +125,6 @@ namespace BundleSystem{
             if(IsCompleted) continuation.Invoke();
             else m_Request.completed += op => continuation.Invoke();
         }
-
     }
 
     public class BundleAsyncSceneRequest : CustomYieldInstruction, IAwaiter<BundleAsyncSceneRequest>

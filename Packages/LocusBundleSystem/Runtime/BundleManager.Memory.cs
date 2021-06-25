@@ -10,7 +10,7 @@ namespace BundleSystem
         public int Id { get; private set; }
         public TrackHandle(int id) => Id = id;
         public bool IsValid() => Id != 0;
-        public bool IsAlive() => BundleManager.IsTrackHandleAlive(Id);
+        public bool IsAlive() => BundleManager.IsTrackHandleAliveInternal(Id);
         public bool IsValidAndAlive() => IsValid() && IsAlive();
         public static TrackHandle<T> Invalid => new TrackHandle<T>(0);
         public void Release()
@@ -24,6 +24,7 @@ namespace BundleSystem
     {
         static int s_LastTrackId = 0;
         static IndexedDictionary<int, TrackInfo> s_TrackInfoDict = new IndexedDictionary<int, TrackInfo>(10);
+        static IndexedDictionary<int, float> s_LoadingAssetsDict = new IndexedDictionary<int, float>(10);
         static Dictionary<int, int> s_TrackInstanceTransformDict = new Dictionary<int, int>(10);
 
         //bundle ref count
@@ -38,11 +39,9 @@ namespace BundleSystem
             s_TrackInfoDict[handle.Id] = exitingTrackInfo;
         }
 
-        internal static bool IsTrackHandleAlive(int id)
-        {
-            if(id == 0) return false;
-            return s_TrackInfoDict.ContainsKey(id);
-        }
+        internal static void TrackAutoReleaseInternal(int trackId) => s_LoadingAssetsDict.Add(trackId, Time.realtimeSinceStartup);
+        internal static void UntrackAutoReleaseInternal(int trackId) => s_LoadingAssetsDict.Remove(trackId);
+        internal static bool IsTrackHandleAliveInternal(int id) => id != 0 && s_TrackInfoDict.ContainsKey(id);
 
         public static TrackHandle<T> TrackExplicit<TRef, T>(this TrackHandle<TRef> referenceHandle, T objectToTrack,  Component newOwner = null)
         where TRef : Object where T : Object
@@ -71,14 +70,14 @@ namespace BundleSystem
 
         public static TrackHandle<GameObject> GetInstanceTrackHandle(this GameObject gameObject) 
         {
-            if(!TryGetTrackIdInternal(gameObject.transform, out var trackId))
+            if(!TryGetTrackId(gameObject.transform, out var trackId))
             {
                 return TrackHandle<GameObject>.Invalid;
             }
             return new TrackHandle<GameObject>(trackId);
         }
 
-        static bool TryGetTrackIdInternal(Transform trans, out int trackId)
+        static bool TryGetTrackId(Transform trans, out int trackId)
         {
             do
             {
@@ -99,7 +98,7 @@ namespace BundleSystem
             public bool InstanceTrack;
         }
 
-        private static TrackHandle<T> TrackObjectInternal<T>(Component owner, T asset, LoadedBundle loadedBundle, bool instanceTracking) where T : Object
+        private static TrackHandle<T> TrackObject<T>(Component owner, T asset, LoadedBundle loadedBundle, bool instanceTracking) where T : Object
         {
             var trackId = ++s_LastTrackId;
             s_TrackInfoDict.Add(trackId, new TrackInfo(){
@@ -111,11 +110,11 @@ namespace BundleSystem
 
             if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
 
-            RetainBundleInternal(loadedBundle);
+            RetainBundle(loadedBundle);
             return new TrackHandle<T>(trackId);
         }
 
-        private static TrackHandle<T>[] TrackObjectsInternal<T>(Component owner, T[] assets, LoadedBundle loadedBundle) where T : Object
+        private static TrackHandle<T>[] TrackObjects<T>(Component owner, T[] assets, LoadedBundle loadedBundle) where T : Object
         {
             var result = new TrackHandle<T>[assets.Length];
             for(int i = 0; i < assets.Length; i++)
@@ -131,12 +130,12 @@ namespace BundleSystem
                 });
             }
 
-            if(assets.Length > 0) RetainBundleInternal(loadedBundle, assets.Length); //do once
+            if(assets.Length > 0) RetainBundle(loadedBundle, assets.Length); //do once
 
             return result;
         }
 
-        private static void TrackInstanceInternal(TrackInfo info, GameObject instance)
+        private static void TrackInstance(TrackInfo info, GameObject instance)
         {
             var trackId = ++s_LastTrackId;
             info.Owner = instance.transform;
@@ -147,14 +146,14 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if(UseAssetDatabaseMap)
             {
-                RetainBundleInternalEditor(info.BundleName);
+                RetainBundleEditor(info.BundleName);
             }
             else
 #endif
             //find related bundle
             if(s_AssetBundles.TryGetValue(info.BundleName, out var loadedBundle))
             {
-                RetainBundleInternal(loadedBundle);
+                RetainBundle(loadedBundle);
             }
 
             s_TrackInstanceTransformDict.Add(instance.transform.GetInstanceID(), trackId);
@@ -174,19 +173,19 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if(UseAssetDatabaseMap)
             {
-                ReleaseBundleInternalEditor(trackInfo.BundleName);
+                ReleaseBundleEditor(trackInfo.BundleName);
             }
             else
 #endif
             //find related bundle
             if(!s_AssetBundles.TryGetValue(trackInfo.BundleName, out var loadedBundle))
             {
-                ReleaseBundleInternal(loadedBundle);
+                ReleaseBundle(loadedBundle);
             }
         }
 
 
-        private static void RetainBundleInternal(LoadedBundle bundle, int count = 1)
+        private static void RetainBundle(LoadedBundle bundle, int count = 1)
         {
             for (int i = 0; i < bundle.Dependencies.Count; i++)
             {
@@ -196,7 +195,7 @@ namespace BundleSystem
             }
         }
 
-        private static void ReleaseBundleInternal(LoadedBundle bundle, int count = 1)
+        private static void ReleaseBundle(LoadedBundle bundle, int count = 1)
         {
             for (int i = 0; i < bundle.Dependencies.Count; i++)
             {
@@ -214,7 +213,7 @@ namespace BundleSystem
         }
 
 #if UNITY_EDITOR
-        private static TrackHandle<T> TrackObjectInternalEditor<T>(Component owner, T asset, string bundleName, bool instanceTracking) where T : Object
+        private static TrackHandle<T> TrackObjectEditor<T>(Component owner, T asset, string bundleName, bool instanceTracking) where T : Object
         {
             var trackId = ++s_LastTrackId;
             s_TrackInfoDict.Add(trackId, new TrackInfo(){
@@ -226,12 +225,12 @@ namespace BundleSystem
 
             if(instanceTracking) s_TrackInstanceTransformDict.Add(owner.GetInstanceID(), trackId);
 
-            RetainBundleInternalEditor(bundleName);
+            RetainBundleEditor(bundleName);
 
             return new TrackHandle<T>(trackId);
         }
 
-        private static TrackHandle<T>[] TrackObjectsInternalEditor<T>(Component owner, T[] objs, string bundleName) where T : Object
+        private static TrackHandle<T>[] TrackObjectsEditor<T>(Component owner, T[] objs, string bundleName) where T : Object
         {
             var result = new TrackHandle<T>[objs.Length];
             for(int i = 0; i < objs.Length; i++)
@@ -247,17 +246,17 @@ namespace BundleSystem
                 });
             }
 
-            if(objs.Length > 0) ReleaseBundleInternalEditor(bundleName, objs.Length);
+            if(objs.Length > 0) ReleaseBundleEditor(bundleName, objs.Length);
             return result;
         }
 
-        private static void RetainBundleInternalEditor(string bundleName, int count = 1)
+        private static void RetainBundleEditor(string bundleName, int count = 1)
         {
             if (!s_BundleRefCounts.ContainsKey(bundleName)) s_BundleRefCounts[bundleName] = count;
             else s_BundleRefCounts[bundleName] += count;
         }
 
-        private static void ReleaseBundleInternalEditor(string bundleName, int count = 1)
+        private static void ReleaseBundleEditor(string bundleName, int count = 1)
         {
             var nextCount = s_BundleRefCounts[bundleName] - count;
             if(nextCount == 0) s_BundleRefCounts.Remove(bundleName);
@@ -271,12 +270,12 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabaseMap && s_EditorDatabaseMap.TryGetBundleNameFromSceneAssetPath(scene.path, out var bundleName))
             {
-                RetainBundleInternalEditor(bundleName);
+                RetainBundleEditor(bundleName);
                 scene.GetRootGameObjects(s_SceneRootObjectCache);
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObjectInternalEditor(owner, (Object)null, bundleName, true);
+                    TrackObjectEditor(owner, (Object)null, bundleName, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }
@@ -284,12 +283,12 @@ namespace BundleSystem
             //if scene is from assetbundle, path will be assetpath inside bundle
             if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
-                RetainBundleInternal(loadedBundle);
+                RetainBundle(loadedBundle);
                 scene.GetRootGameObjects(s_SceneRootObjectCache);
                 for (int i = 0; i < s_SceneRootObjectCache.Count; i++)
                 {
                     var owner = s_SceneRootObjectCache[i].transform;
-                    TrackObjectInternal(owner, (Object)null, loadedBundle, true);
+                    TrackObject(owner, (Object)null, loadedBundle, true);
                 }
                 s_SceneRootObjectCache.Clear();
             }
@@ -300,39 +299,59 @@ namespace BundleSystem
 #if UNITY_EDITOR
             if (UseAssetDatabaseMap && s_EditorDatabaseMap.TryGetBundleNameFromSceneAssetPath(scene.path, out var bundleName))
             {
-                ReleaseBundleInternalEditor(bundleName);
+                ReleaseBundleEditor(bundleName);
             }
 #endif
             //if scene is from assetbundle, path will be assetpath inside bundle
             if (s_SceneNames.TryGetValue(scene.path, out var loadedBundle))
             {
-                ReleaseBundleInternal(loadedBundle);
+                ReleaseBundle(loadedBundle);
             }
         }
 
         private static void Update()
         {
-            //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
-            int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackInfoDict.Count);
-
-            for(int i = 0; i < trackCount; i++)
             {
-                if (s_TrackInfoDict.TryGetNext(out var kv) && kv.Value.Owner == null)
+                //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
+                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_TrackInfoDict.Count);
+
+                for(int i = 0; i < trackCount; i++)
                 {
+                    if (!s_TrackInfoDict.TryGetNext(out var kv)) continue;
+                    if (kv.Value.Owner != null) continue;
+
                     s_TrackInfoDict.Remove(kv.Key);
 
                     //release bundle
 #if UNITY_EDITOR
                     if(UseAssetDatabaseMap)
                     {
-                        ReleaseBundleInternalEditor(kv.Value.BundleName);
+                        ReleaseBundleEditor(kv.Value.BundleName);
                     }
                     else
 #endif
                     if (s_AssetBundles.TryGetValue(kv.Value.BundleName, out var loadedBundle)) 
                     {
-                        ReleaseBundleInternal(loadedBundle);
+                        ReleaseBundle(loadedBundle);
                     }
+                }
+            }
+
+            {
+                //we should check entire collection at least in 5 seconds, calculate trackCount for that purpose
+                int trackCount = Mathf.CeilToInt(Time.unscaledDeltaTime * 0.2f * s_LoadingAssetsDict.Count);
+                var time = Time.realtimeSinceStartup;
+
+                for(int i = 0; i < trackCount; i++)
+                {
+                    if (!s_LoadingAssetsDict.TryGetNext(out var kv)) continue;
+                    
+                    //not loaded yet or not yet over 1sec
+                    if (time - kv.Value < 1f) continue;
+
+                    s_LoadingAssetsDict.Remove(kv.Key);
+                    //release it
+                    ReleaseHandleInternal(kv.Key);
                 }
             }
         }
