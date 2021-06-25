@@ -58,14 +58,22 @@ namespace Tests
         public void SyncApiTest()
         {
             var texReq = m_Owner.Load<Texture>("Local", "TestTexture_Local");
+
             Assert.NotNull(texReq.Asset);
         }
+
+        UnityEngine.UI.Image m_Image;
+
+        TrackHandle<Sprite> m_SpriteHandle;
 
         [UnityTest]
         public IEnumerator AsyncApiTest()
         {
-            yield return null;
-            Debug.Log("UnityTest");
+            var spriteReq = m_Image.LoadAsync<Sprite>("Object", "TestSprite");
+            //disabled
+            yield return spriteReq;
+            m_Image.sprite = spriteReq.Asset;
+            spriteReq.Handle.Override(ref m_SpriteHandle);
         }
 
         [UnityTest]
@@ -77,8 +85,9 @@ namespace Tests
 
         private async Task TaskAsyncApiTestFunction()
         {
-            await Task.Delay(1000);
-            Assert.NotNull(await m_Owner.LoadAsync<Texture>("Local", "TestTexture_Local"));
+            var req = await m_Owner.LoadAsync<Sprite>("Object", "TestSprite");
+            m_Image.sprite = req.Asset;
+            req.Handle.Override(ref m_SpriteHandle);
         }
     }
 }

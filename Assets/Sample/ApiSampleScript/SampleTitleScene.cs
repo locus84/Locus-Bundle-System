@@ -12,6 +12,14 @@ public class SampleTitleScene : MonoBehaviour
         StartCoroutine(CoDownloadAssetBundles());
     }
 
+    public async void Start()
+    {
+        var manifestReq = await BundleManager.GetManifest();
+        if(!manifestReq.Succeeded) throw new System.Exception("haha");
+        var downloadReq = await BundleManager.DownloadAssetBundles(manifestReq.Result);
+        
+    }
+
     IEnumerator CoDownloadAssetBundles()
     {
         var manifestReq = BundleManager.GetManifest();

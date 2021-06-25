@@ -63,6 +63,12 @@ namespace BundleSystem
             return new TrackHandle<T>(newTrackId);
         }
 
+        public static void Override<T>(this TrackHandle<T> newHandle, ref TrackHandle<T> oldHandle) where T : Object
+        {
+            oldHandle.Release();
+            oldHandle = newHandle;
+        }
+
         public static TrackHandle<GameObject> GetInstanceTrackHandle(this GameObject gameObject) 
         {
             if(!TryGetTrackIdInternal(gameObject.transform, out var trackId))
