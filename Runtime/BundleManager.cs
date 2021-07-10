@@ -108,6 +108,7 @@ namespace BundleSystem
             //temp dictionaries to apply very last
             var bundleRequests = new Dictionary<string, UnityWebRequest>();
             var loadedBundles = new Dictionary<string, LoadedBundle>();
+            var localBundleHashes = new Dictionary<string, Hash128>();
             
             var manifestReq = UnityWebRequest.Get(Utility.CombinePath(LocalURL, AssetbundleBuildSettings.ManifestFileName));
             yield return manifestReq.SendWebRequest();
@@ -142,6 +143,7 @@ namespace BundleSystem
                 AssetbundleBuildManifest.BundleInfo bundleInfoToLoad;
                 AssetbundleBuildManifest.BundleInfo cachedBundleInfo = default;
                 var localBundleInfo = localManifest.BundleInfos[i];
+                localBundleHashes.Add(localBundleInfo.BundleName, localBundleInfo.Hash);
 
                 bool useLocalBundle =
                     !cacheIsValid || //cache is not valid or...
@@ -200,7 +202,7 @@ namespace BundleSystem
 
             s_AssetBundles.Clear();
             s_SceneNames.Clear();
-            s_LocalBundles.Clear();
+            s_LocalBundles = localBundleHashes;
 
             foreach(var kv in bundleRequests)
             {
@@ -208,7 +210,6 @@ namespace BundleSystem
                 loadedBundle.Bundle = DownloadHandlerAssetBundle.GetContent(kv.Value);
                 CollectSceneNames(loadedBundle);
                 s_AssetBundles.Add(loadedBundle.Name, loadedBundle);
-                if(loadedBundle.IsLocalBundle) s_LocalBundles.Add(loadedBundle.Name, loadedBundle.Hash);
                 kv.Value.Dispose();
             }
             
