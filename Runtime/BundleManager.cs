@@ -105,14 +105,19 @@ namespace BundleSystem
 
             if(LogMessages) Debug.Log($"LocalURL : {LocalURL}");
 
-            foreach (var kv in s_AssetBundles)
-                kv.Value.Bundle.Unload(false);
-            s_SceneNames.Clear();
-            s_AssetBundles.Clear();
-            s_LocalBundles.Clear();
-
+            //temp dictionaries to apply very last
+            var bundleRequests = new Dictionary<string, UnityWebRequest>();
+            var loadedBundles = new Dictionary<string, LoadedBundle>();
+            
             var manifestReq = UnityWebRequest.Get(Utility.CombinePath(LocalURL, AssetbundleBuildSettings.ManifestFileName));
             yield return manifestReq.SendWebRequest();
+
+            if(result.IsCancelled) 
+            {
+                manifestReq.Dispose();
+                yield break;
+            }
+
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
                 result.Done(BundleErrorCode.NetworkError);
@@ -152,13 +157,21 @@ namespace BundleSystem
                 {
                     result.SetProgress(bundleOp.progress);
                     yield return null;
+                    if(result.IsCancelled) break;
+                }
+
+                if(result.IsCancelled)
+                {
+                    bundleReq.Dispose();
+                    break;
                 }
 
                 if (!bundleReq.isHttpError && !bundleReq.isNetworkError)
                 {
-                    var loadedBundle = new LoadedBundle(bundleInfoToLoad, loadPath, DownloadHandlerAssetBundle.GetContent(bundleReq), useLocalBundle);
-                    s_AssetBundles.Add(localBundleInfo.BundleName, loadedBundle);
-                    CollectSceneNames(loadedBundle);
+                    //load bundle later
+                    var loadedBundle = new LoadedBundle(bundleInfoToLoad, loadPath, null, useLocalBundle);
+                    bundleRequests.Add(localBundleInfo.BundleName, bundleReq);
+                    loadedBundles.Add(localBundleInfo.BundleName, loadedBundle);
 
                     if (LogMessages) Debug.Log($"Local bundle Loaded - Name : {localBundleInfo.BundleName}, Hash : {bundleInfoToLoad.Hash }");
                 }
@@ -167,11 +180,38 @@ namespace BundleSystem
                     result.Done(BundleErrorCode.NetworkError);
                     yield break;
                 }
-
-                bundleReq.Dispose();
-                s_LocalBundles.Add(localBundleInfo.BundleName, localBundleInfo.Hash);
             }
 
+            if(result.IsCancelled)
+            {
+                foreach(var kv in bundleRequests)
+                {
+                    kv.Value.Dispose();
+                }
+                yield break;
+            }
+
+            foreach(var kv in s_AssetBundles)
+            {
+                kv.Value.Bundle.Unload(false);
+                if (kv.Value.RequestForReload != null) 
+                    kv.Value.RequestForReload.Dispose(); //dispose reload bundle
+            }
+
+            s_AssetBundles.Clear();
+            s_SceneNames.Clear();
+            s_LocalBundles.Clear();
+
+            foreach(var kv in bundleRequests)
+            {
+                var loadedBundle = loadedBundles[kv.Key];
+                loadedBundle.Bundle = DownloadHandlerAssetBundle.GetContent(kv.Value);
+                CollectSceneNames(loadedBundle);
+                s_AssetBundles.Add(loadedBundle.Name, loadedBundle);
+                s_LocalBundles.Add(loadedBundle.Name, loadedBundle.Hash);
+                kv.Value.Dispose();
+            }
+            
             RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
@@ -218,6 +258,12 @@ namespace BundleSystem
 
             var manifestReq = UnityWebRequest.Get(Utility.CombinePath(RemoteURL, AssetbundleBuildSettings.ManifestFileName).Replace('\\', '/'));
             yield return manifestReq.SendWebRequest();
+
+            if(result.IsCancelled)
+            {
+                manifestReq.Dispose();
+                yield break;
+            }
 
             if (manifestReq.isHttpError || manifestReq.isNetworkError)
             {
@@ -299,6 +345,10 @@ namespace BundleSystem
             var bundlesToUnload = new HashSet<string>(s_AssetBundles.Keys);
             var downloadBundleList = subsetNames == null ? manifest.BundleInfos : manifest.CollectSubsetBundleInfoes(subsetNames);
             var bundleReplaced = false; //bundle has been replaced
+            
+            //temp dictionaries to apply very last
+            var bundleRequests = new Dictionary<string, UnityWebRequest>();
+            var loadedBundles = new Dictionary<string, LoadedBundle>();
 
             result.SetIndexLength(downloadBundleList.Count);
             
@@ -330,6 +380,13 @@ namespace BundleSystem
                     {
                         result.SetProgress(operation.progress);
                         yield return null;
+                        if(result.IsCancelled) break;
+                    }
+
+                    if(result.IsCancelled)
+                    {
+                        bundleReq.Dispose();
+                        break;
                     }
 
                     if (bundleReq.isNetworkError || bundleReq.isHttpError)
@@ -338,21 +395,36 @@ namespace BundleSystem
                         yield break;
                     }
 
-                    if (s_AssetBundles.TryGetValue(bundleInfo.BundleName, out previousBundle))
-                    {
-                        bundleReplaced = true;
-                        previousBundle.Bundle.Unload(false);
-                        if (previousBundle.RequestForReload != null) 
-                            previousBundle.RequestForReload.Dispose(); //dispose reload bundle
-                        s_AssetBundles.Remove(bundleInfo.BundleName);
-                    }
-
-                    var loadedBundle = new LoadedBundle(bundleInfo, loadURL, DownloadHandlerAssetBundle.GetContent(bundleReq), islocalBundle);
-                    s_AssetBundles.Add(bundleInfo.BundleName, loadedBundle);
-                    CollectSceneNames(loadedBundle);
+                    var loadedBundle = new LoadedBundle(bundleInfo, loadURL, null, islocalBundle);
+                    bundleRequests.Add(bundleInfo.BundleName, bundleReq);
+                    loadedBundles.Add(bundleInfo.BundleName, loadedBundle);
                     if (LogMessages) Debug.Log($"Loading Bundle Name : {bundleInfo.BundleName} Complete");
-                    bundleReq.Dispose();
                 }
+            }
+
+            if(result.IsCancelled)
+            {
+                foreach(var kv in bundleRequests)
+                {
+                    kv.Value.Dispose();
+                }
+                yield break;
+            }
+
+            foreach(var kv in bundleRequests)
+            {
+                var loadedBundle = loadedBundles[kv.Key];
+                if (s_AssetBundles.TryGetValue(loadedBundle.Name, out var previousBundle))
+                {
+                    bundleReplaced = true;
+                    previousBundle.Bundle.Unload(false);
+                    if (previousBundle.RequestForReload != null) 
+                        previousBundle.RequestForReload.Dispose(); //dispose reload bundle
+                }
+                loadedBundle.Bundle = DownloadHandlerAssetBundle.GetContent(kv.Value);
+                CollectSceneNames(loadedBundle);
+                s_AssetBundles[loadedBundle.Name] = loadedBundle;
+                kv.Value.Dispose();
             }
 
             //let's drop unknown bundles loaded
@@ -396,7 +468,5 @@ namespace BundleSystem
                 BundleManager.OnDestroy();
             }
         }
-
-        
     }
 }

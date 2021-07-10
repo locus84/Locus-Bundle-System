@@ -406,6 +406,7 @@ namespace BundleSystem
         public int CurrentCount { get; private set; } = -1;
         public float Progress { get; private set; } = 0f;
         public bool CurrentlyLoadingFromCache { get; private set; } = false;
+        public bool IsCancelled => ErrorCode == BundleErrorCode.Cancelled;
 
         internal void SetCachedBundle(bool cached)
         {
@@ -437,6 +438,12 @@ namespace BundleSystem
             ErrorCode = code;
         }
 
+        public void Cancel()
+        {
+            if(IsDone) throw new System.Exception("Operation has been dont. can't be cancelled");
+            ErrorCode = BundleErrorCode.Cancelled;
+        }
+
         public override bool keepWaiting => !IsDone;
     }
 
@@ -447,5 +454,6 @@ namespace BundleSystem
         NotInitialized = 1,
         NetworkError = 2,
         ManifestParseError = 3,
+        Cancelled = 4,
     }
 }
