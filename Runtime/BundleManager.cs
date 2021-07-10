@@ -208,7 +208,7 @@ namespace BundleSystem
                 loadedBundle.Bundle = DownloadHandlerAssetBundle.GetContent(kv.Value);
                 CollectSceneNames(loadedBundle);
                 s_AssetBundles.Add(loadedBundle.Name, loadedBundle);
-                s_LocalBundles.Add(loadedBundle.Name, loadedBundle.Hash);
+                if(loadedBundle.IsLocalBundle) s_LocalBundles.Add(loadedBundle.Name, loadedBundle.Hash);
                 kv.Value.Dispose();
             }
             
