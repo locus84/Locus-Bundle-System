@@ -1,8 +1,11 @@
 # Locus Bundle System For Unity
 
-[Unity Forum Thread](https://forum.unity.com/threads/simpler-alternative-to-addressables.820998)
+[Unity Forum Thread](https://forum.unity.com/threads/simpler-alternative-to-addressables.820998) 
 
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
+[![Discord](https://img.shields.io/discord/865867751813414933.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/kfVzV7qaEF)
 [![openupm](https://img.shields.io/npm/v/com.locus.bundlesystem?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.locus.bundlesystem/)
+
 
 Assetbundle system from unity5 will be obsolute in future.\
 Unity Addressables system provides very flexible implementation that fits on any project.\
