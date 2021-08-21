@@ -53,6 +53,45 @@ namespace BundleSystem
 
         public static bool AutoReloadBundle { get; private set; } = true;
         public static bool LogMessages { get; set; }
+
+#if UNITY_EDITOR && UNITY_2019_1_OR_NEWER
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void DomainReloaded()
+        {
+            //need to reset static fields and events
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= TrackOnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= TrackOnSceneUnLoaded;
+
+            //manager defaults
+            Initialized = false;
+            s_Helper = default;
+            s_DebugGUI = default;
+            UseAssetDatabase = true;
+            LocalURL = default;
+            RemoteURL = default;
+            GlobalBundleHash = default;
+            AutoReloadBundle = true;
+            s_LocalBundles.Clear();
+            s_SceneNames.Clear();
+            OnDestroy(); // need to unload bundles
+
+            //debugging defaults
+            ShowDebugGUI = default;
+            LogMessages = default;
+
+            //api defaults
+            s_EditorBuildSettings = default;
+            s_EditorAssetMap = default;
+
+            //memory defaults
+            s_WeakRefPool.Clear();
+            s_BundleRefCounts.Clear();
+            s_BundleDirectUseCount.Clear();
+            s_TrackingObjects.Clear();
+            s_TrackingOwners.Clear();
+            s_TrackingGameObjects.Clear();
+        }  
+#endif
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Setup()

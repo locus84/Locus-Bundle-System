@@ -80,12 +80,17 @@ namespace BundleSystem
                 value = m_InnerList[CurrentIndex];
                 return true;
             }
+            
+            public void Clear()
+            {
+                ResetCurrentIndex();
+                m_InnerList.Clear();
+            }
         }
 
         class IndexedDictionary<TKey, TValue>
         {
             public int CurrentIndex { get; private set; } = -1;
-
 
             List<KeyValuePair<TKey, TValue>> m_InnerList;
             Dictionary<TKey, int> m_KeyDictionary;
@@ -168,6 +173,13 @@ namespace BundleSystem
                 if (CurrentIndex >= Count) CurrentIndex = 0;
                 value = m_InnerList[CurrentIndex];
                 return true;
+            }
+
+            public void Clear()
+            {
+                ResetCurrentIndex();
+                m_InnerList.Clear();
+                m_KeyDictionary.Clear();
             }
         }
     }
