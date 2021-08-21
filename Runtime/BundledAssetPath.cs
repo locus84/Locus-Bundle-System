@@ -7,7 +7,7 @@ namespace BundleSystem
     //bundleAssetPath must have it's own functions as it doesn't need any
     //using needed, and struct -> interface conversion allocates struct to heap
     [System.Serializable]
-    public struct BundledAssetPath
+    public struct BundledAssetPath : System.IEquatable<BundledAssetPath>
     {
         [SerializeField]
         public string BundleName;
@@ -37,6 +37,41 @@ namespace BundleSystem
         public bool Exists()
         {
             return BundleManager.IsAssetExist(BundleName, AssetName);
+        }
+
+        public bool Equals(BundledAssetPath other)
+        {
+            return BundleName == other.BundleName && AssetName == other.AssetName;
+        }
+        
+        public override int GetHashCode() 
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + BundleName.GetHashCode();
+                hash = hash * 23 + AssetName.GetHashCode();
+                return hash;
+            }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if(obj is BundledAssetPath otherPath)
+            {
+                return Equals(otherPath);
+            }
+            return false;
+        }
+
+        public static bool operator ==(BundledAssetPath lhs, BundledAssetPath rhs) 
+        {
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(BundledAssetPath lhs, BundledAssetPath rhs) 
+        {
+            return !lhs.Equals(rhs);
         }
     }
 
