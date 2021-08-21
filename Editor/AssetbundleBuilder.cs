@@ -74,12 +74,29 @@ namespace BundleSystem
                 }
             }
             
+            var tempPrevSceneKey = "WriteExpectedSharedBundlesPrevScene";
+            var prevScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            EditorPrefs.SetString(tempPrevSceneKey, prevScene.path);
+
             var bundleList = GetAssetBundlesList(settings);
             var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
             {
                 EditorUtility.DisplayDialog("Succeeded!", $"Check {LogExpectedSharedBundleFileName} in your project root directory!", "Confirm");
+            }
+
+            //domain reloaded, we need to restore previous scene path
+            var prevScenePath = EditorPrefs.GetString(tempPrevSceneKey, string.Empty);
+            //back to previous scene as all processed scene's prefabs are unpacked.
+            if(string.IsNullOrEmpty(prevScenePath))
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.DefaultGameObjects);
+            }
+            else
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(prevScenePath);
             }
         }
 
