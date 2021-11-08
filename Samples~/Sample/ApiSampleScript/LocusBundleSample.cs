@@ -4,6 +4,8 @@ using BundleSystem;
 
 public class LocusBundleSample : MonoBehaviour
 {
+    bool m_DownloadCancelRequested = false;
+
     IEnumerator Start()
     {
         //show log message
@@ -36,6 +38,10 @@ public class LocusBundleSample : MonoBehaviour
                     $"Progress : {downloadReq.Progress * 100}%, " +
                     $"FromCache {downloadReq.CurrentlyLoadingFromCache}");
             }
+
+            //if user requests cancel
+            if(m_DownloadCancelRequested) downloadReq.Cancel();
+
             yield return null;
         }
 
@@ -47,6 +53,10 @@ public class LocusBundleSample : MonoBehaviour
         //start to game
     }
 
+    public void CancelDownload()
+    {
+        m_DownloadCancelRequested = true;
+    }
 
     IEnumerator ApiSamples()
     {

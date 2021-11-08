@@ -115,6 +115,9 @@ BundleSystem.BundledAssetPath MyAsset;
 \
 **Initialization Example**
 ```cs
+    //cancel request check
+    bool m_DownloadCancelRequested = false;
+
     IEnumerator Start()
     {
         //show log message
@@ -147,6 +150,10 @@ BundleSystem.BundledAssetPath MyAsset;
                     $"Progress : {downloadReq.Progress * 100}%, " +
                     $"FromCache {downloadReq.CurrentlyLoadingFromCache}");
             }
+            
+            //if user requests cancel
+            if(m_DownloadCancelRequested) downloadReq.Cancel();
+
             yield return null;
         }
         
@@ -156,6 +163,11 @@ BundleSystem.BundledAssetPath MyAsset;
             Debug.LogError(downloadReq.ErrorCode);
         }
         //start to game
+    }
+    
+    public void CancelDownload()
+    {
+        m_DownloadCancelRequested = true;
     }
 
 ```
