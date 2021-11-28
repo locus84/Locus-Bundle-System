@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using BundleSystem;
+using System.Threading.Tasks;
 
 public class LocusBundleSample : MonoBehaviour
 {
@@ -111,6 +112,34 @@ public class LocusBundleSample : MonoBehaviour
         }
     }
 
+    async Task AsyncAwaitSamples()
+    {
+        //initialize with task aupport
+        {
+            //show log message
+            BundleManager.LogMessages = true;
+
+            //show some ongui elements for debugging
+            BundleManager.ShowDebugGUI = true;
+
+            //initialize bundle system & load local bundles
+            await BundleManager.Initialize();
+
+            //get download size from latest bundle manifest
+            var manifestReq = await BundleManager.GetManifest();
+            if (!manifestReq.Succeeded)
+            {
+                //handle error
+                Debug.LogError(manifestReq.ErrorCode);
+            }
+
+            //load asset with async/await
+            using (var loadReq = await BundleManager.LoadAsync<GameObject>("Prefab", "PrefabName"))
+            {
+                var instance = BundleManager.Instantiate(loadReq.Asset);
+            }
+        }
+    }
 
     IEnumerator AdvancedApiSamples()
     {

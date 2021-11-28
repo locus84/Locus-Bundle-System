@@ -230,6 +230,33 @@ BundleSystem.BundledAssetPath MyAsset;
 ```
 
 \
+**Async/Await Examples**
+```cs
+    async Task AsyncAwaitSamples()
+    {
+        //initialize with task aupport
+        {
+            //initialize bundle system & load local bundles
+            await BundleManager.Initialize();
+
+            //get download size from latest bundle manifest
+            var manifestReq = await BundleManager.GetManifest();
+            if (!manifestReq.Succeeded)
+            {
+                //handle error
+                Debug.LogError(manifestReq.ErrorCode);
+            }
+
+            //load asset with async/await
+            using (var loadReq = await BundleManager.LoadAsync<GameObject>("Prefab", "PrefabName"))
+            {
+                var instance = BundleManager.Instantiate(loadReq.Asset);
+            }
+        }
+    }
+```
+
+\
 **Editor Test Script**
 ```cs
       [Test]
