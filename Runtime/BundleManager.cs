@@ -50,6 +50,7 @@ namespace BundleSystem
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
         public static string GlobalBundleHash { get; private set; }
+        internal static int UnityMainThreadId { get; private set; }
 
         public static bool AutoReloadBundle { get; private set; } = true;
         public static bool LogMessages { get; set; }
@@ -98,7 +99,7 @@ namespace BundleSystem
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += TrackOnSceneLoaded;
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += TrackOnSceneUnLoaded;
-
+            UnityMainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             var managerGo = new GameObject("_BundleManager");
             GameObject.DontDestroyOnLoad(managerGo);
             s_Helper = managerGo.AddComponent<BundleManagerHelper>();
@@ -158,7 +159,7 @@ namespace BundleSystem
                 yield break;
             }
 
-            if (manifestReq.isHttpError || manifestReq.isNetworkError)
+            if(!Utility.CheckRequestSuccess(manifestReq))
             {
                 result.Done(BundleErrorCode.NetworkError);
                 yield break;
@@ -207,7 +208,7 @@ namespace BundleSystem
                     break;
                 }
 
-                if (!bundleReq.isHttpError && !bundleReq.isNetworkError)
+                if(Utility.CheckRequestSuccess(bundleReq))
                 {
                     //load bundle later
                     var loadedBundle = new LoadedBundle(bundleInfoToLoad, loadPath, null, useLocalBundle);
@@ -305,7 +306,7 @@ namespace BundleSystem
                 yield break;
             }
 
-            if (manifestReq.isHttpError || manifestReq.isNetworkError)
+            if(!Utility.CheckRequestSuccess(manifestReq))
             {
                 result.Done(BundleErrorCode.NetworkError);
                 yield break;
@@ -429,7 +430,7 @@ namespace BundleSystem
                         break;
                     }
 
-                    if (bundleReq.isNetworkError || bundleReq.isHttpError)
+                    if(!Utility.CheckRequestSuccess(bundleReq))
                     {
                         result.Done(BundleErrorCode.NetworkError);
                         yield break;

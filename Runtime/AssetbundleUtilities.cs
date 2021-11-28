@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace BundleSystem
 {
@@ -132,6 +133,15 @@ namespace BundleSystem
             var combined = Path.Combine(args);
             if(Path.DirectorySeparatorChar == '\\') combined = combined.Replace('\\', '/');
             return combined;
+        }
+
+        public static bool CheckRequestSuccess(UnityWebRequest request)
+        {
+#if UNITY_2020_2_OR_NEWER
+            return request.result == UnityWebRequest.Result.Success;
+#else
+            return !request.isHttpError && !request.isNetworkError;
+#endif
         }
     }
 }

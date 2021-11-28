@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -340,7 +342,7 @@ namespace BundleSystem
     /// this class is for simulating assetbundle request in editor.
     /// using this class we can provide unified structure.
     /// </summary>
-    public class BundleRequest<T> : CustomYieldInstruction, System.IDisposable where T : Object
+    public class BundleRequest<T> : CustomYieldInstruction, IAwaiter<BundleRequest<T>>, System.IDisposable where T : Object
     {
         AssetBundleRequest mRequest;
         T mLoadedAsset;
@@ -366,6 +368,7 @@ namespace BundleSystem
         //provide similar apis
         public override bool keepWaiting => mRequest == null ? false : !mRequest.isDone;
         public bool IsDone => mRequest == null ? true : mRequest.isDone;
+        bool IAwaiter<BundleRequest<T>>.IsCompleted => IsDone;
         public T Asset => mRequest == null ? mLoadedAsset : mRequest.asset as T;
         public float Progress => mRequest == null ? 1f : mRequest.progress;
 
@@ -386,27 +389,95 @@ namespace BundleSystem
                 }
             }
         }
-    }
 
+        BundleRequest<T> IAwaiter<BundleRequest<T>>.GetResult() => this;
+        
+        public IAwaiter<BundleRequest<T>> GetAwaiter() => this;
+        
+        void INotifyCompletion.OnCompleted(System.Action continuation)
+        {
+            if(Thread.CurrentThread.ManagedThreadId != BundleManager.UnityMainThreadId) 
+            {
+                throw new System.Exception("Should be awaited in UnityMainThread"); 
+            }
+
+            if(IsDone) continuation.Invoke();
+            else mRequest.completed += op => continuation.Invoke();
+        }
+
+        void ICriticalNotifyCompletion.UnsafeOnCompleted(System.Action continuation) => ((INotifyCompletion)this).OnCompleted(continuation);
+    }
 
     /// <summary>
-    /// assetbundle update
+    /// Async operation of BundleManager. with result T
     /// </summary>
-    public class BundleAsyncOperation<T> : BundleAsyncOperation
+    public class BundleAsyncOperation<T> : BundleAsyncOperationBase, IAwaiter<BundleAsyncOperation<T>>
     {
-        public T Result;
+        public T Result { get; internal set; }
+
+        //awaiter implementations
+        bool IAwaiter<BundleAsyncOperation<T>>.IsCompleted => IsDone;
+        BundleAsyncOperation<T> IAwaiter<BundleAsyncOperation<T>>.GetResult() => this;
+        public IAwaiter<BundleAsyncOperation<T>> GetAwaiter() => this;
+        void INotifyCompletion.OnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
+        void ICriticalNotifyCompletion.UnsafeOnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
     }
 
-    public class BundleAsyncOperation : CustomYieldInstruction
+    /// <summary>
+    /// Async operation of BundleManager.
+    /// </summary>
+    public class BundleAsyncOperation : BundleAsyncOperationBase, IAwaiter<BundleAsyncOperation>
     {
+        //awaiter implementations
+        bool IAwaiter<BundleAsyncOperation>.IsCompleted => IsDone;
+        BundleAsyncOperation IAwaiter<BundleAsyncOperation>.GetResult() => this;
+        public IAwaiter<BundleAsyncOperation> GetAwaiter() => this;
+        void INotifyCompletion.OnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
+        void ICriticalNotifyCompletion.UnsafeOnCompleted(System.Action continuation) => AwaiterOnComplete(continuation);
+    }
+    
+
+    /// <summary>
+    /// Base class of async bundle operation
+    /// </summary>
+    public class BundleAsyncOperationBase : CustomYieldInstruction
+    {
+        /// <summary>
+        /// Whether this operation has completed or not.
+        /// </summary>
         public bool IsDone => ErrorCode != BundleErrorCode.NotFinished;
+        /// Whether this operation has succeeded or not.
         public bool Succeeded => ErrorCode == BundleErrorCode.Success;
+        /// ErrorCode of the operation.
         public BundleErrorCode ErrorCode { get; private set; } = BundleErrorCode.NotFinished;
+        /// <summary>
+        /// Total Assetbundle Count to precess
+        /// </summary>
         public int TotalCount { get; private set; } = 0;
+        /// <summary>
+        /// Precessed assetbundle count along with TotalCount
+        /// -1 means processing has not been started.
+        /// </summary>
         public int CurrentCount { get; private set; } = -1;
+        /// <summary>
+        /// Total progress of this operation. From 0 to 1.
+        /// </summary>
         public float Progress { get; private set; } = 0f;
+        /// <summary>
+        /// Whether currently processing AssetBundle is loading from cache or downloading.
+        /// </summary>
         public bool CurrentlyLoadingFromCache { get; private set; } = false;
+
+        /// <summary>
+        /// Is operation cancelled
+        /// </summary>
         public bool IsCancelled => ErrorCode == BundleErrorCode.Cancelled;
+
+        protected event System.Action m_OnComplete;
+        /// <summary>
+        /// Whether this operation has completed or not.
+        /// </summary>
+        public override bool keepWaiting => !IsDone;
 
         internal void SetCachedBundle(bool cached)
         {
@@ -436,6 +507,19 @@ namespace BundleSystem
                 Progress = 1f;
             }
             ErrorCode = code;
+            m_OnComplete?.Invoke();
+            m_OnComplete = null;
+        }
+
+        protected void AwaiterOnComplete(System.Action continuation)
+        {
+            if(Thread.CurrentThread.ManagedThreadId != BundleManager.UnityMainThreadId) 
+            {
+                throw new System.Exception("Should be awaited in UnityMainThread"); 
+            }
+
+            if(IsDone) continuation.Invoke();
+            else m_OnComplete += continuation;
         }
 
         public void Cancel()
@@ -443,8 +527,6 @@ namespace BundleSystem
             if(IsDone) throw new System.Exception("Operation has been dont. can't be cancelled");
             ErrorCode = BundleErrorCode.Cancelled;
         }
-
-        public override bool keepWaiting => !IsDone;
     }
 
     public enum BundleErrorCode
@@ -455,5 +537,17 @@ namespace BundleSystem
         NetworkError = 2,
         ManifestParseError = 3,
         Cancelled = 4,
+    }
+    
+    /// <summary>
+    /// Helper interface for async/await functionality
+    /// </summary>
+    public interface IAwaiter<out TResult> : ICriticalNotifyCompletion
+    {
+        bool IsCompleted { get; }
+
+        TResult GetResult();
+
+        IAwaiter<TResult> GetAwaiter();
     }
 }
