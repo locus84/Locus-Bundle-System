@@ -9,6 +9,7 @@ namespace BundleSystem
     {        
         private Dictionary<string, Dictionary<string, List<string>>> m_Map = new Dictionary<string, Dictionary<string, List<string>>>();
         static List<string> s_EmptyStringList = new List<string>();
+        static string[] s_EmptyStringArray = new string[0];
         
         public EditorAssetMap(AssetbundleBuildSettings settings)
         {
@@ -41,10 +42,16 @@ namespace BundleSystem
             return pathList;
         }
 
-        public List<string> GetAssetPaths(string bundleName)
+        public string[] GetAssetPaths(string bundleName)
         {
-            if (!m_Map.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringList;
-            return innerDic.Values.SelectMany(list => list).ToList();
+            if (!m_Map.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringArray;
+            return innerDic.Values.SelectMany(list => list).ToArray();
+        }
+        
+        public string[] GetAssetNames(string bundleName)
+        {
+            if (!m_Map.TryGetValue(bundleName, out var innerDic)) return s_EmptyStringArray;
+            return innerDic.Keys.ToArray();
         }
 
         public bool IsAssetExist(string bundleName, string assetName)

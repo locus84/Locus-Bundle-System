@@ -59,12 +59,12 @@ namespace BundleSystem
             {
                 EnsureAssetDatabase();
                 var assets = s_EditorAssetMap.GetAssetPaths(bundleName);
-                if (assets.Count == 0) return new T[0];
+                if (assets.Length == 0) return new T[0];
 
                 var typeExpected = typeof(T);
-                var foundList = new List<T>(assets.Count);
+                var foundList = new List<T>(assets.Length);
 
-                for (int i = 0; i < assets.Count; i++)
+                for (int i = 0; i < assets.Length; i++)
                 {
                     var loaded = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assets[i]);
                     if (loaded == null) continue;
@@ -222,6 +222,21 @@ namespace BundleSystem
             if(!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
             if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle)) return false;
             return foundBundle.Bundle.Contains(assetName);
+        }
+
+        public static string[] GetAssetNames(string bundleName) 
+        {
+#if UNITY_EDITOR
+            if (UseAssetDatabase) 
+            {
+                EnsureAssetDatabase();
+                return s_EditorAssetMap.GetAssetNames(bundleName);
+            }
+#endif
+            if (!Initialized) throw new System.Exception("BundleManager not initialized, try initialize first!");
+            if (!s_AssetBundles.TryGetValue(bundleName, out var foundBundle))
+                return new string[0];
+            return foundBundle.Bundle.GetAllAssetNames();
         }
         
         public static GameObject Instantiate(GameObject original)
