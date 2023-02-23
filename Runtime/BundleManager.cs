@@ -47,6 +47,7 @@ namespace BundleSystem
         public static bool UseAssetDatabase { get; private set; } = true;
 #endif
         public static bool Initialized { get; private set; } = false;
+        public static string BuildTarget { get; private set; }
         public static string LocalURL { get; private set; }
         public static string RemoteURL { get; private set; }
         public static string GlobalBundleHash { get; private set; }
@@ -253,7 +254,9 @@ namespace BundleSystem
                 kv.Value.Dispose();
             }
             
-            RemoteURL = Utility.CombinePath(localManifest.RemoteURL, localManifest.BuildTarget);
+            BuildTarget = localManifest.BuildTarget;
+            RemoteURL = Utility.CombinePath(localManifest.RemoteURL, BuildTarget);
+
 #if UNITY_EDITOR
             if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
                 RemoteURL = "file://" + Utility.CombinePath(s_EditorBuildSettings.RemoteOutputPath, UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString());
@@ -261,6 +264,24 @@ namespace BundleSystem
             Initialized = true;
             if (LogMessages) Debug.Log($"Initialize Success \nRemote URL : {RemoteURL} \nLocal URL : {LocalURL}");
             result.Done(BundleErrorCode.Success);
+        }
+
+        public static void ChangeRemoteURL(string url)
+        {
+            if (!Initialized)
+            {
+                Debug.LogError("Do Initialize first");
+                return;
+            }
+                
+#if UNITY_EDITOR
+            if (s_EditorBuildSettings.EmulateWithoutRemoteURL)
+            {
+                Debug.LogError("ChangeRemoteURL does not work when EmulateWithoutRemoteURL is on.");
+                return;
+            }
+#endif
+            RemoteURL = url;
         }
 
         /// <summary>

@@ -32,6 +32,9 @@ namespace BundleSystem
             {
                 s_EditorAssetMap = new EditorAssetMap(s_EditorBuildSettings);
                 //set initialied so it does not need explit call initialzed when using aassetdatabase
+
+                //just keep the buildtarget
+                BuildTarget = UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString();
                 Initialized = true;
             }
         }
