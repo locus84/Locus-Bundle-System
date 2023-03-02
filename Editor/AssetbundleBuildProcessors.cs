@@ -24,7 +24,7 @@ namespace BundleSystem
             {
                 if(Application.isBatchMode)
                 {
-                    Debug.LogError("Missing built local bundle directory, Locus bundle system won't work properly.");
+                    Debug.LogWarning("Missing built local bundle directory, Locus bundle system won't work properly.");
                     return; //we can't build now as it's in batchmode
                 }
                 else
