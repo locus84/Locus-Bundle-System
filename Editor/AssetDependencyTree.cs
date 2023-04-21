@@ -94,7 +94,7 @@ namespace BundleSystem
                 if(IsLocal && !node.IsLocal)
                 {
                     node.IsLocal = true;
-                    if(node.IsShared) BundleName += "_Local";
+                    if(node.IsShared) node.BundleName += "_Local";
                 }
             }
 
