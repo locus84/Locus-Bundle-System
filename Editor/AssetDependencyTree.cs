@@ -16,9 +16,9 @@ namespace BundleSystem
             public List<AssetBundleBuild> SharedBundles;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles)
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool folderBasedSharedGeneration)
         {
-            var context = new Context();
+            var context = new Context() { FolderBasedSharedBundle = folderBasedSharedGeneration };
             var rootNodesToProcess = new List<RootNode>();
 
             //collecting reference should be done after adding all root nodes
@@ -39,15 +39,29 @@ namespace BundleSystem
             foreach (var node in rootNodesToProcess) node.CollectNodes(context);
 
             var resultList = new List<AssetBundleBuild>();
+            var pathDict = new Dictionary<string, List<string>>();
+
             //convert found shared node proper struct
             foreach(var sharedRootNode in context.ResultSharedNodes)
             {
-                var assetNames = new string[] { sharedRootNode.Path };
+                if(!pathDict.TryGetValue(sharedRootNode.BundleName, out var list))
+                {
+                    list = new List<string>();
+                    pathDict.Add(sharedRootNode.BundleName, list);
+                }
+
+                list.Add(sharedRootNode.Path);
+                
+            }
+
+            foreach(var kv in pathDict)
+            {
+                var assetArray = kv.Value.ToArray();
                 var bundleDefinition = new AssetBundleBuild()
                 {
-                    assetBundleName = sharedRootNode.BundleName,
-                    assetNames = assetNames,
-                    addressableNames = assetNames
+                    assetBundleName = kv.Key,
+                    assetNames = assetArray,
+                    addressableNames = assetArray
                 };
                 resultList.Add(bundleDefinition);
             }
@@ -62,6 +76,12 @@ namespace BundleSystem
             public Dictionary<string, RootNode> RootNodes = new Dictionary<string, RootNode>();
             public Dictionary<string, Node> IndirectNodes = new Dictionary<string, Node>();
             public List<RootNode> ResultSharedNodes = new List<RootNode>();
+            public bool FolderBasedSharedBundle;
+        }
+
+        public class SharedNode
+        {
+
         }
 
         public class RootNode : Node
@@ -126,9 +146,13 @@ namespace BundleSystem
                         {
                             node.RemoveFromTree(context);
 
-                            var newName = $"Shared_{AssetDatabase.AssetPathToGUID(child)}";
-                            var depsHash = new HashSet<string>();
-                            context.DependencyDic.Add(newName, depsHash);
+                            var newName = GetSharedBundleName(child, context.FolderBasedSharedBundle);
+                            if(!context.DependencyDic.TryGetValue(newName, out var depsHash))
+                            {
+                                depsHash = new HashSet<string>();
+                                context.DependencyDic.Add(newName, depsHash);
+                            }
+
                             var newRoot = new RootNode(child, newName, depsHash, true);
 
                             //add deps
@@ -150,6 +174,13 @@ namespace BundleSystem
                     childNode.CollectNodes(context);
                 }
             }
+        }
+
+        private static string GetSharedBundleName(string path, bool folderBased)
+        {
+            if(!folderBased) return $"Shared_{AssetDatabase.AssetPathToGUID(path)}";
+            path = System.IO.Path.GetDirectoryName(path).Replace('/', '|').Replace('\\', '|');
+            return $"Shared_{path}";
         }
     }
 }

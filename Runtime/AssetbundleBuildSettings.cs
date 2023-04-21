@@ -92,6 +92,8 @@ namespace BundleSystem
 
         [Tooltip("Auto create shared bundles to remove duplicated assets")]
         public bool AutoCreateSharedBundles = true;
+        [Tooltip("Shared bundles are grouped by using their directory name")]
+        public bool FolderBasedSharedBundle = false;
 
         /// <summary>
         /// output folder inside project

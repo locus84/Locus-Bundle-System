@@ -79,7 +79,7 @@ namespace BundleSystem
             EditorPrefs.SetString(tempPrevSceneKey, prevScene.path);
 
             var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.FolderBasedSharedBundle);
 
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -150,7 +150,7 @@ namespace BundleSystem
 
 
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.FolderBasedSharedBundle);
 
             if (settings.AutoCreateSharedBundles)
             {
