@@ -296,20 +296,13 @@ namespace BundleSystem
             sb.AppendLine($"Possible shared bundles will be created..");
             sb.AppendLine();
 
-            var sharedBundleDic = treeResult.SharedBundles.ToDictionary(ab => ab.assetBundleName, ab => ab.assetNames[0]);
-
-            //find flatten deps which contains non-shared bundles
-            var definedBundles = treeResult.BundleDependencies.Keys.Where(name => !sharedBundleDic.ContainsKey(name)).ToList();
-            var depsOnlyDefined = definedBundles.ToDictionary(name => name, name => Utility.CollectBundleDependencies(treeResult.BundleDependencies, name));
-
-            foreach(var kv in sharedBundleDic)
+            foreach(var grp in treeResult.SharedNodes.GroupBy(node => node.BundleName))
             {
-                var bundleName = kv.Key;
-                var assetPath = kv.Value;
-                var referencedDefinedBundles = depsOnlyDefined.Where(pair => pair.Value.Contains(bundleName)).Select(pair => pair.Key).ToList();
-
-                sb.AppendLine($"Shared_{AssetDatabase.AssetPathToGUID(assetPath)} - { assetPath } is referenced by");
-                foreach(var refBundleName in referencedDefinedBundles) sb.AppendLine($"    - {refBundleName}");
+                sb.AppendLine($"SharedBundle - {grp.Key} is referenced by");
+                foreach(var node in grp) 
+                {
+                    foreach(var refitem in node.GetReferencedBy()) sb.AppendLine($"    - {node.Path} <- {refitem.asset}({refitem.bundle})");
+                }
                 sb.AppendLine();
             }
 

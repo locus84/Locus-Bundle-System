@@ -14,6 +14,7 @@ namespace BundleSystem
         {
             public Dictionary<string, HashSet<string>> BundleDependencies;
             public List<AssetBundleBuild> SharedBundles;
+            public List<RootNode> SharedNodes;
         }
 
         public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool folderBasedSharedGeneration)
@@ -29,7 +30,7 @@ namespace BundleSystem
                 context.DependencyDic.Add(bundle.assetBundleName, depsHash);
                 foreach(var asset in bundle.assetNames)
                 {
-                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash, false);
+                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash);
                     context.RootNodes.Add(asset, rootNode);
                     rootNodesToProcess.Add(rootNode);
                 }
@@ -49,9 +50,7 @@ namespace BundleSystem
                     list = new List<string>();
                     pathDict.Add(sharedRootNode.BundleName, list);
                 }
-
                 list.Add(sharedRootNode.Path);
-                
             }
 
             foreach(var kv in pathDict)
@@ -66,7 +65,11 @@ namespace BundleSystem
                 resultList.Add(bundleDefinition);
             }
 
-            return new ProcessResult() { BundleDependencies = context.DependencyDic, SharedBundles = resultList };
+            return new ProcessResult() { 
+                BundleDependencies = context.DependencyDic, 
+                SharedBundles = resultList,
+                SharedNodes = context.ResultSharedNodes
+            };
         }
 
         //actual node tree context
@@ -79,24 +82,26 @@ namespace BundleSystem
             public bool FolderBasedSharedBundle;
         }
 
-        public class SharedNode
-        {
-
-        }
-
         public class RootNode : Node
         {
             public string BundleName { get; private set; }
-            public bool IsShared { get; private set; }
-            public HashSet<string> ReferencedBundleNames;
+            List<(string asset, string bundle)> m_ReferencedBy = new List<(string, string)>();
+            HashSet<string> m_ReferenceBundleNames;
 
-            public RootNode(string path, string bundleName, HashSet<string> deps, bool isShared) : base(path, null)
+            public RootNode(string path, string bundleName, HashSet<string> deps) : base(path, null)
             {
-                IsShared = isShared;
                 BundleName = bundleName;
                 Root = this;
-                ReferencedBundleNames = deps;
+                m_ReferenceBundleNames = deps;
             }
+
+            public void AddReference(RootNode node)
+            {
+                m_ReferenceBundleNames.Add(node.BundleName);
+                node.m_ReferencedBy.Add((BundleName, Path));
+            }
+
+            public List<(string asset, string bundle)> GetReferencedBy() => m_ReferencedBy;
         }
 
         public class Node
@@ -134,7 +139,7 @@ namespace BundleSystem
                     //already root node, wont be included multiple times
                     if (context.RootNodes.TryGetValue(child, out var rootNode))
                     {
-                        Root.ReferencedBundleNames.Add(rootNode.Root.BundleName);
+                        Root.AddReference(rootNode.Root);
                         continue;
                     }
 
@@ -153,11 +158,11 @@ namespace BundleSystem
                                 context.DependencyDic.Add(newName, depsHash);
                             }
 
-                            var newRoot = new RootNode(child, newName, depsHash, true);
+                            var newRoot = new RootNode(child, newName, depsHash);
 
                             //add deps
-                            node.Root.ReferencedBundleNames.Add(newName);
-                            Root.ReferencedBundleNames.Add(newName);
+                            node.Root.AddReference(newRoot);
+                            Root.AddReference(newRoot);
 
                             context.RootNodes.Add(child, newRoot);
                             context.ResultSharedNodes.Add(newRoot);
