@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 
 namespace BundleSystem
@@ -12,25 +13,23 @@ namespace BundleSystem
     {
         public class ProcessResult
         {
-            public Dictionary<string, HashSet<string>> BundleDependencies;
-            public List<AssetBundleBuild> SharedBundles;
+            public Dictionary<string, List<string>> BundleDependencies = new Dictionary<string, List<string>>();
             public List<RootNode> SharedNodes;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> definedBundles, bool folderBasedSharedGeneration)
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> bundles, bool generateSharedNodes, bool folderBasedSharedGeneration, HashSet<string> localBundles = null)
         {
-            var context = new Context() { FolderBasedSharedBundle = folderBasedSharedGeneration };
+            var context = new Context() { FolderBasedSharedBundle = folderBasedSharedGeneration, GenerateSharedNodes = generateSharedNodes };
             var rootNodesToProcess = new List<RootNode>();
 
             //collecting reference should be done after adding all root nodes
             //if not, there might be false positive shared bundle that already exist in bundle defines
-            foreach(var bundle in definedBundles)
+            foreach(var bundle in bundles)
             {
-                var depsHash = new HashSet<string>();
-                context.DependencyDic.Add(bundle.assetBundleName, depsHash);
+                var isLocal = localBundles?.Contains(bundle.assetBundleName) ?? false;
                 foreach(var asset in bundle.assetNames)
                 {
-                    var rootNode = new RootNode(asset, bundle.assetBundleName, depsHash);
+                    var rootNode = new RootNode(asset, bundle.assetBundleName, isLocal, false);
                     context.RootNodes.Add(asset, rootNode);
                     rootNodesToProcess.Add(rootNode);
                 }
@@ -39,35 +38,25 @@ namespace BundleSystem
             //actually analize and create shared bundles
             foreach (var node in rootNodesToProcess) node.CollectNodes(context);
 
-            var resultList = new List<AssetBundleBuild>();
-            var pathDict = new Dictionary<string, List<string>>();
-
-            //convert found shared node proper struct
-            foreach(var sharedRootNode in context.ResultSharedNodes)
+            bundles.Clear();
+            var dependencies = new Dictionary<string, List<string>>();
+            
+            foreach(var grp in context.RootNodes.Select(kv => kv.Value).GroupBy(node => node.BundleName))
             {
-                if(!pathDict.TryGetValue(sharedRootNode.BundleName, out var list))
+                var assets = grp.Select(node => node.Path).ToArray();
+                bundles.Add(new AssetBundleBuild()
                 {
-                    list = new List<string>();
-                    pathDict.Add(sharedRootNode.BundleName, list);
-                }
-                list.Add(sharedRootNode.Path);
-            }
+                    assetBundleName = grp.Key,
+                    assetNames = assets,
+                    addressableNames = assets
+                });
 
-            foreach(var kv in pathDict)
-            {
-                var assetArray = kv.Value.ToArray();
-                var bundleDefinition = new AssetBundleBuild()
-                {
-                    assetBundleName = kv.Key,
-                    assetNames = assetArray,
-                    addressableNames = assetArray
-                };
-                resultList.Add(bundleDefinition);
+                var deps = grp.SelectMany(node => node.GetReferences().Select(refNode => refNode.BundleName)).Distinct().ToList();
+                dependencies.Add(grp.Key, deps);
             }
 
             return new ProcessResult() { 
-                BundleDependencies = context.DependencyDic, 
-                SharedBundles = resultList,
+                BundleDependencies = dependencies,
                 SharedNodes = context.ResultSharedNodes
             };
         }
@@ -75,33 +64,42 @@ namespace BundleSystem
         //actual node tree context
         public class Context
         {
-            public Dictionary<string, HashSet<string>> DependencyDic = new Dictionary<string, HashSet<string>>();
             public Dictionary<string, RootNode> RootNodes = new Dictionary<string, RootNode>();
             public Dictionary<string, Node> IndirectNodes = new Dictionary<string, Node>();
             public List<RootNode> ResultSharedNodes = new List<RootNode>();
             public bool FolderBasedSharedBundle;
+            public bool GenerateSharedNodes;
         }
 
         public class RootNode : Node
         {
             public string BundleName { get; private set; }
-            List<(string asset, string bundle)> m_ReferencedBy = new List<(string, string)>();
-            HashSet<string> m_ReferenceBundleNames;
+            public bool IsLocal { get; private set; }
+            public bool IsShared { get; private set; }
+            List<RootNode> m_ReferencedBy = new List<RootNode>();
+            List<RootNode> m_References = new List<RootNode>();
 
-            public RootNode(string path, string bundleName, HashSet<string> deps) : base(path, null)
+            public RootNode(string path, string bundleName, bool isLocal, bool isShared) : base(path, null)
             {
+                IsLocal = isLocal;
+                IsShared = isShared;
                 BundleName = bundleName;
                 Root = this;
-                m_ReferenceBundleNames = deps;
             }
 
             public void AddReference(RootNode node)
             {
-                m_ReferenceBundleNames.Add(node.BundleName);
-                node.m_ReferencedBy.Add((Path, BundleName));
+                m_References.Add(node);
+                node.m_ReferencedBy.Add(this);
+                if(IsLocal && !node.IsLocal)
+                {
+                    node.IsLocal = true;
+                    if(node.IsShared) BundleName += "_Local";
+                }
             }
 
-            public List<(string asset, string bundle)> GetReferencedBy() => m_ReferencedBy;
+            public List<RootNode> GetReferencedBy() => m_ReferencedBy;
+            public List<RootNode> GetReferences() => m_References;
         }
 
         public class Node
@@ -145,20 +143,14 @@ namespace BundleSystem
 
                     //check if it's already indirect node (skip if it's same bundle)
                     //circular dependency will be blocked by indirect check
-                    if (context.IndirectNodes.TryGetValue(child, out var node))
+                    if (context.GenerateSharedNodes && context.IndirectNodes.TryGetValue(child, out var node))
                     {
                         if (node.Root.BundleName != Root.BundleName)
                         {
                             node.RemoveFromTree(context);
 
                             var newName = GetSharedBundleName(child, context.FolderBasedSharedBundle);
-                            if(!context.DependencyDic.TryGetValue(newName, out var depsHash))
-                            {
-                                depsHash = new HashSet<string>();
-                                context.DependencyDic.Add(newName, depsHash);
-                            }
-
-                            var newRoot = new RootNode(child, newName, depsHash);
+                            var newRoot = new RootNode(child, newName, false, true);
 
                             //add deps
                             node.Root.AddReference(newRoot);

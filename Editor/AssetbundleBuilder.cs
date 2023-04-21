@@ -28,13 +28,13 @@ namespace BundleSystem
         {
             public AssetbundleBuildSettings CurrentSettings;
             public BuildType CurrentBuildType;
-            public Dictionary<string, HashSet<string>> DependencyDic;
+            public Dictionary<string, List<string>> DependencyDic;
 
             public CustomBuildParameters(AssetbundleBuildSettings settings, 
                 BuildTarget target, 
                 BuildTargetGroup group, 
                 string outputFolder,
-                Dictionary<string, HashSet<string>> deps,
+                Dictionary<string, List<string>> deps,
                 BuildType  buildType) : base(target, group, outputFolder)
             {
                 CurrentSettings = settings;
@@ -79,7 +79,7 @@ namespace BundleSystem
             EditorPrefs.SetString(tempPrevSceneKey, prevScene.path);
 
             var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.FolderBasedSharedBundle);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles, settings.FolderBasedSharedBundle);
 
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -148,14 +148,8 @@ namespace BundleSystem
 
             var outputPath = Utility.CombinePath(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
 
-
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.FolderBasedSharedBundle);
-
-            if (settings.AutoCreateSharedBundles)
-            {
-                bundleList.AddRange(treeResult.SharedBundles);
-            }
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles, settings.FolderBasedSharedBundle);
 
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
 
@@ -301,7 +295,7 @@ namespace BundleSystem
                 sb.AppendLine($"SharedBundle - {grp.Key} is referenced by");
                 foreach(var node in grp) 
                 {
-                    foreach(var refitem in node.GetReferencedBy()) sb.AppendLine($"    - {node.Path} <- {refitem.asset}({refitem.bundle})");
+                    foreach(var refitem in node.GetReferencedBy()) sb.AppendLine($"    - {node.Path} <- {refitem.Path}({refitem.BundleName})");
                 }
                 sb.AppendLine();
             }
