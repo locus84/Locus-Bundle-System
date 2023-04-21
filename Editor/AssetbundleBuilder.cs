@@ -77,13 +77,19 @@ namespace BundleSystem
             var tempPrevSceneKey = "WriteExpectedSharedBundlesPrevScene";
             var prevScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
             EditorPrefs.SetString(tempPrevSceneKey, prevScene.path);
+            
+            var localBundles = new HashSet<string>();
+            foreach(var bundle in settings.BundleSettings)
+            {
+                if(bundle.IncludedInPlayer) localBundles.Add(bundle.BundleName);
+            }
 
             var bundleList = GetAssetBundlesList(settings);
             var treeResult = AssetDependencyTree.ProcessDependencyTree(
                 bundleList, 
                 settings.AutoCreateSharedBundles, 
                 settings.FolderBasedSharedBundle,
-                settings.BundleSettings.Where(s => s.IncludedInPlayer).Select(s => s.BundleName).ToHashSet());
+                localBundles);
 
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -152,12 +158,18 @@ namespace BundleSystem
 
             var outputPath = Utility.CombinePath(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
 
+            var localBundles = new HashSet<string>();
+            foreach(var bundle in settings.BundleSettings)
+            {
+                if(bundle.IncludedInPlayer) localBundles.Add(bundle.BundleName);
+            }
+
             //generate sharedBundle if needed, and pre generate dependency
             var treeResult = AssetDependencyTree.ProcessDependencyTree(
                 bundleList, 
                 settings.AutoCreateSharedBundles, 
                 settings.FolderBasedSharedBundle,
-                settings.BundleSettings.Where(s => s.IncludedInPlayer).Select(s => s.BundleName).ToHashSet());
+                localBundles);
 
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
 
