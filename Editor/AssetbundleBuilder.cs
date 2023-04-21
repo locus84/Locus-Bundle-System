@@ -79,7 +79,11 @@ namespace BundleSystem
             EditorPrefs.SetString(tempPrevSceneKey, prevScene.path);
 
             var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles, settings.FolderBasedSharedBundle);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(
+                bundleList, 
+                settings.AutoCreateSharedBundles, 
+                settings.FolderBasedSharedBundle,
+                settings.BundleSettings.Where(s => s.IncludedInPlayer).Select(s => s.BundleName).ToHashSet());
 
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -149,7 +153,11 @@ namespace BundleSystem
             var outputPath = Utility.CombinePath(buildType == BuildType.Local ? settings.LocalOutputPath : settings.RemoteOutputPath, buildTarget.ToString());
 
             //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, settings.AutoCreateSharedBundles, settings.FolderBasedSharedBundle);
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(
+                bundleList, 
+                settings.AutoCreateSharedBundles, 
+                settings.FolderBasedSharedBundle,
+                settings.BundleSettings.Where(s => s.IncludedInPlayer).Select(s => s.BundleName).ToHashSet());
 
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
 

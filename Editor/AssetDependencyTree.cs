@@ -17,7 +17,7 @@ namespace BundleSystem
             public List<RootNode> SharedNodes;
         }
 
-        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> bundles, bool generateSharedNodes, bool folderBasedSharedGeneration, HashSet<string> localBundles = null)
+        public static ProcessResult ProcessDependencyTree(List<AssetBundleBuild> bundles, bool generateSharedNodes, bool folderBasedSharedGeneration, HashSet<string> localBundles)
         {
             var context = new Context() { FolderBasedSharedBundle = folderBasedSharedGeneration, GenerateSharedNodes = generateSharedNodes };
             var rootNodesToProcess = new List<RootNode>();
