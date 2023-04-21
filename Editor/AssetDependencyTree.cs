@@ -98,7 +98,7 @@ namespace BundleSystem
             public void AddReference(RootNode node)
             {
                 m_ReferenceBundleNames.Add(node.BundleName);
-                node.m_ReferencedBy.Add((BundleName, Path));
+                node.m_ReferencedBy.Add((Path, BundleName));
             }
 
             public List<(string asset, string bundle)> GetReferencedBy() => m_ReferencedBy;
