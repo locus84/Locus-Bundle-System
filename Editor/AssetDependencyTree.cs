@@ -182,7 +182,7 @@ namespace BundleSystem
         private static string GetSharedBundleName(string path, bool folderBased)
         {
             if(!folderBased) return $"Shared_{AssetDatabase.AssetPathToGUID(path)}";
-            path = System.IO.Path.GetDirectoryName(path).Replace('/', '|').Replace('\\', '|');
+            path = System.IO.Path.GetDirectoryName(path).Replace('/', '_').Replace('\\', '_');
             return $"Shared_{path}";
         }
     }
