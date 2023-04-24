@@ -21,11 +21,14 @@ namespace BundleSystem
         {
             var context = new Context() { FolderBasedSharedBundle = folderBasedSharedGeneration, GenerateSharedNodes = generateSharedNodes };
             var rootNodesToProcess = new List<RootNode>();
+            var originalBundles = new HashSet<string>();
 
             //collecting reference should be done after adding all root nodes
             //if not, there might be false positive shared bundle that already exist in bundle defines
             foreach(var bundle in bundles)
             {
+                if(bundle.assetBundleName.StartsWith("Shared_")) throw new System.Exception($"Bundle name should not start with \"Shared\" : {bundle.assetBundleName}");
+                originalBundles.Add(bundle.assetBundleName);
                 var isLocal = localBundles?.Contains(bundle.assetBundleName) ?? false;
                 foreach(var asset in bundle.assetNames)
                 {
@@ -38,18 +41,21 @@ namespace BundleSystem
             //actually analize and create shared bundles
             foreach (var node in rootNodesToProcess) node.CollectNodes(context);
 
-            bundles.Clear();
             var dependencies = new Dictionary<string, List<string>>();
             
             foreach(var grp in context.RootNodes.Select(kv => kv.Value).GroupBy(node => node.BundleName))
             {
-                var assets = grp.Select(node => node.Path).ToArray();
-                bundles.Add(new AssetBundleBuild()
+                //we do not touch original bundles, as we don't do any modifiation there
+                if(!originalBundles.Contains(grp.Key))
                 {
-                    assetBundleName = grp.Key,
-                    assetNames = assets,
-                    addressableNames = assets
-                });
+                    var assets = grp.Select(node => node.Path).ToArray();
+                    bundles.Add(new AssetBundleBuild()
+                    {
+                        assetBundleName = grp.Key,
+                        assetNames = assets,
+                        addressableNames = assets
+                    });
+                }
 
                 var deps = grp.SelectMany(node => node.GetReferences().Select(refNode => refNode.BundleName)).Distinct().ToList();
                 dependencies.Add(grp.Key, deps);
