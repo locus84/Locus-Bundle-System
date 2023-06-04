@@ -147,5 +147,3 @@ namespace BundleSystem
         public bool CompressBundle = true;
     }
 }
-
-     

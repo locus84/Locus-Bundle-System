@@ -85,11 +85,11 @@ namespace BundleSystem
             }
 
             var bundleList = GetAssetBundlesList(settings);
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(
-                bundleList, 
-                settings.AutoCreateSharedBundles, 
-                settings.FolderBasedSharedBundle,
-                localBundles);
+                
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, new SharedBundleSetting(
+                    localBundles, 
+                    settings.AutoCreateSharedBundles,
+                    settings.FolderBasedSharedBundle));
 
             WriteSharedBundleLog($"{Application.dataPath}/../", treeResult);
             if(!Application.isBatchMode)
@@ -164,13 +164,11 @@ namespace BundleSystem
                 if(bundle.IncludedInPlayer) localBundles.Add(bundle.BundleName);
             }
 
-            //generate sharedBundle if needed, and pre generate dependency
-            var treeResult = AssetDependencyTree.ProcessDependencyTree(
-                bundleList, 
-                settings.AutoCreateSharedBundles, 
-                settings.FolderBasedSharedBundle,
-                localBundles);
-
+            var treeResult = AssetDependencyTree.ProcessDependencyTree(bundleList, new SharedBundleSetting(
+                    localBundles, 
+                    settings.AutoCreateSharedBundles,
+                    settings.FolderBasedSharedBundle));
+                    
             var buildParams = new CustomBuildParameters(settings, buildTarget, groupTarget, outputPath, treeResult.BundleDependencies, buildType);
 
             buildParams.UseCache = !settings.ForceRebuild;
@@ -182,9 +180,8 @@ namespace BundleSystem
             }
 
             ContentPipeline.BuildCallbacks.PostPackingCallback += PostPackingForSelectiveBuild;
-            var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(bundleList.ToArray()), out var results);
+            var returnCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(treeResult.Results), out var results);
             ContentPipeline.BuildCallbacks.PostPackingCallback -= PostPackingForSelectiveBuild;
-            
 
             if (returnCode == ReturnCode.Success)
             {
@@ -367,6 +364,35 @@ namespace BundleSystem
 
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             File.WriteAllText(Utility.CombinePath(path, LogFileName), sb.ToString());
+        }
+
+        public class SharedBundleSetting : ISharedBundleSetting
+        {
+            public SharedBundleSetting(HashSet<string> localBundles, bool enableSharedBundle, bool folderBased)
+            {
+                LocalBundles = localBundles;
+                EnableSharedBundle = enableSharedBundle;
+                FolderBased = folderBased;
+            }
+
+            public HashSet<string> LocalBundles { get; private set; }
+            public bool EnableSharedBundle { get; private set; }
+            public bool FolderBased { get; private set; }
+            public bool IsLocalBundle(string bundleName) => LocalBundles.Contains(bundleName);
+            public bool AllowSharedBundle(string assetPath) => EnableSharedBundle;
+
+            public string GetSharedBundleName(string assetPath, bool isLocal)
+            {
+                if(FolderBased)
+                {
+                    var bundleName = System.IO.Path.GetDirectoryName(assetPath).Replace('/', '_').Replace('\\', '_');
+                    return bundleName + (isLocal? "_Local" : string.Empty);
+                }
+                else
+                {
+                    return AssetDatabase.AssetPathToGUID(assetPath);
+                }
+            }
         }
     }
 }

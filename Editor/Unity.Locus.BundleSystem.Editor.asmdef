@@ -1,5 +1,6 @@
 {
     "name": "Unity.Locus.BundleSystem.Editor",
+    "rootNamespace": "",
     "references": [
         "Unity.Locus.BundleSystem",
         "Unity.ScriptableBuildPipeline.Editor",
@@ -14,6 +15,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.2d.sprite",
+            "expression": "",
+            "define": "BUNDLE_SPRITE_ATLAS"
+        }
+    ],
     "noEngineReferences": false
 }
