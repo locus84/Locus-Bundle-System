@@ -32,7 +32,7 @@ namespace BundleSystem
             context.AtlasedSprites = AssetDatabase.FindAssets("t:spriteatlas")
                 .Select(guid => AssetDatabase.GUIDToAssetPath(guid))
                 .Where(path => SpriteAtlasExtensions.IsIncludeInBuild(AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path)))
-                .SelectMany(path => AssetDatabase.GetDependencies(path, true).Select(dep => (path, dep)))
+                .SelectMany(path => AssetDatabase.GetDependencies(path, true).Where(dep => dep != path).Select(dep => (path, dep)))
                 .GroupBy(tuple => tuple.dep)
                 .ToDictionary(grp => grp.Key, grp => grp.Select(tuple => tuple.path).ToList());
 #endif
@@ -151,10 +151,7 @@ namespace BundleSystem
         {
             public RootNode Root { get; protected set; }
             public string Path { get; private set; }
-            public Dictionary<string, Node> Children = new Dictionary<string, Node>();
             public bool IsRoot => Root == this;
-            public bool HasChild => Children.Count > 0;
-
             public Node(string path, RootNode root)
             {
                 Root = root;
@@ -164,7 +161,6 @@ namespace BundleSystem
             public void RemoveFromTree(Context context)
             {
                 context.IndirectNodes.Remove(Path);
-                foreach (var kv in Children) kv.Value.RemoveFromTree(context);
             }
 
             public void CollectNodes(Context context, bool fromAtlas = false)
@@ -172,14 +168,14 @@ namespace BundleSystem
                 var childDeps = AssetDatabase.GetDependencies(Path, false);
 
 #if BUNDLE_SPRITE_ATLAS
+                //if sprite atlas, set from atlas to true
+                //to prevent stack overflow
+                if(Path.EndsWith(".spriteatlas")) fromAtlas = true;
+
                 if(!fromAtlas && context.AtlasedSprites.TryGetValue(Path, out var atlases))
                 {
                     childDeps = childDeps.Union(atlases).Distinct().ToArray();
                 }
-
-                //if sprite atlas, set from atlas to true
-                //to prevent stack overflow
-                if(!fromAtlas && Path.EndsWith(".spriteatlas")) fromAtlas = true;
 #endif
 
                 //if it's a scene unwarp placed prefab directly into the scene
@@ -210,7 +206,6 @@ namespace BundleSystem
                         //if not, add to indirect node
                         var childNode = new Node(child, Root);
                         context.IndirectNodes.Add(child, childNode);
-                        Children.Add(child, childNode);
 
                         //continue collect
                         childNode.CollectNodes(context, fromAtlas);
@@ -219,8 +214,8 @@ namespace BundleSystem
 
                     //skip if it's from same bundle
                     if (node.Root.BundleName == Root.BundleName) continue;
-                    
-                    node.RemoveFromTree(context);
+
+                    context.IndirectNodes.Remove(child);
                     var newRoot = RootNode.CreateShared(child);
 
                     //add deps
