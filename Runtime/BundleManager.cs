@@ -122,8 +122,12 @@ namespace BundleSystem
 
         private static void OnDestroy()
         {
+            if (s_AssetBundles == null) return;
             foreach (var kv in s_AssetBundles)
+            {
+                if (kv.Value.Bundle == null) continue;
                 kv.Value.Bundle.Unload(false);
+            }
             s_AssetBundles.Clear();
         }
 
